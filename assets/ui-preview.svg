@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="880" viewBox="0 0 480 880">
+<title>Linkmark UI design preview, sample content; not a Figma runtime screenshot</title>
+<defs><pattern id="dots" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".7" fill="#cfcfcf"/></pattern><clipPath id="coverClip"><path d="M46 250h308a6 6 0 0 1 6 6v170H40V256a6 6 0 0 1 6-6Z"/></clipPath></defs>
+<rect x="0" y="0" width="480" height="880" rx="0" fill="#f2f2f2" stroke="none"/>
+<g font-family="Segoe UI, Microsoft YaHei, sans-serif">
+<text x="40" y="25" font-size="12" fill="#777" font-weight="400">UI design preview · Sample content</text>
+<g transform="translate(40 40)">
+<rect x="0" y="0" width="400" height="800" rx="10" fill="#fff" stroke="#ddd"/>
+<rect x="20" y="20" width="32" height="32" rx="9" fill="#fff" stroke="#e7e7e7"/>
+<path d="M31 27h10v19l-5-3-5 3Z" fill="none" stroke="#252525" stroke-width="1.5"/>
+<text x="62" y="35" font-size="15" fill="#252525" font-weight="600">Linkmark</text><text x="62" y="53" font-size="12" fill="#777" font-weight="400">Turn links into preview cards</text>
+<path d="M0 70h400" stroke="#e7e7e7"/>
+<text x="20" y="98" font-size="12" fill="#252525" font-weight="500">URL</text>
+<rect x="20" y="109" width="248" height="40" rx="6" fill="#fff" stroke="#e7e7e7"/><text x="54" y="134" font-size="12" fill="#252525" font-weight="400">https://designsystems.com</text>
+<g transform="translate(31 121)" fill="none" stroke="#777" stroke-width="1.3"><path d="m6 8 4-4M5 10 3 12a3 3 0 0 1-4-4l4-4a3 3 0 0 1 4 0M9 6l2-2a3 3 0 0 0-4-4L3 4"/></g>
+<rect x="276" y="109" width="104" height="40" rx="6" fill="#7b3ff2" stroke="none"/><text x="296" y="134" font-size="12" fill="#fff" font-weight="500">Get preview</text>
+<text x="20" y="171" font-size="10.7" fill="#777" font-weight="400">Get preview sends this URL to Microlink. Public pages only.</text>
+<text x="20" y="188" font-size="10.7" fill="#777" font-weight="400">Or enter details manually, without fetching the URL.</text>
+<text x="20" y="220" font-size="12" fill="#252525" font-weight="500">Card preview</text><text x="310" y="220" font-size="11" fill="#777" font-weight="400">Preview ready</text>
+<rect x="20" y="233" width="360" height="338" rx="8" fill="#f5f5f5" stroke="#e7e7e7"/><rect x="21" y="234" width="358" height="336" rx="8" fill="url(#dots)" stroke="none"/>
+<rect x="40" y="252" width="320" height="302" rx="10" fill="#0000000b" stroke="none"/><rect x="40" y="250" width="320" height="302" rx="10" fill="#fff" stroke="#dcdcdc"/>
+<g clip-path="url(#coverClip)">
+<rect x="40" y="250" width="320" height="176" rx="0" fill="#f5d9e7" stroke="none"/>
+<text x="60" y="280" font-size="11" fill="#634b5b" font-weight="600">DESIGN SYSTEMS</text>
+<text x="60" y="333" font-size="27" fill="#30262e" font-weight="600">Good icons.</text><text x="60" y="366" font-size="27" fill="#30262e" font-weight="600">Clear ideas.</text>
+<g transform="translate(266 278)" fill="none" stroke="#7d4d68" stroke-width="2.5"><rect width="62" height="62" rx="15"/><circle cx="31" cy="31" r="14"/><path d="M17 31h28M31 17v28"/></g>
+<g transform="translate(266 350)" fill="none" stroke="#7d4d68" stroke-width="2.5"><rect width="62" height="62" rx="15"/><path d="m17 31 10 10 18-20"/></g>
+</g>
+<path d="M40 426h320" stroke="#e6e6e6"/>
+<text x="57" y="454" font-size="16" fill="#252525" font-weight="400">A complete guide to iconography</text>
+<text x="57" y="479" font-size="12" fill="#858585" font-weight="400">A deep-dive guide on how to create,</text>
+<text x="57" y="497" font-size="12" fill="#858585" font-weight="400">organize, name, and use icons within…</text>
+<g transform="translate(58 516)" stroke="#858585" fill="none"><circle cx="6" cy="6" r="6"/><ellipse cx="6" cy="6" rx="2.8" ry="6"/><path d="M0 6h12"/></g>
+<text x="79" y="527" font-size="12" fill="#858585" font-weight="400">designsystems.com</text><path d="M79 529h110" stroke="#858585" stroke-width=".6"/>
+<rect x="20" y="587" width="224" height="34" rx="6" fill="#f5f5f5" stroke="#e7e7e7"/><rect x="23" y="590" width="100" height="28" rx="4" fill="#fff" stroke="none"/>
+<g fill="none" stroke="#252525"><rect x="33" y="598" width="10" height="12" rx="1.5"/><path d="M33 604h10"/></g>
+<text x="51" y="608" font-size="12" fill="#252525" font-weight="400">Vertical</text><g fill="none" stroke="#777"><rect x="136" y="599" width="13" height="10" rx="1.5"/><path d="M144 599v10"/></g><text x="157" y="608" font-size="12" fill="#777" font-weight="400">Horizontal</text>
+<text x="314" y="608" font-size="11" fill="#777" font-weight="400">360 px wide</text>
+<path d="M20 641h360" stroke="#e7e7e7"/>
+<text x="20" y="665" font-size="12" fill="#252525" font-weight="500">Edit content</text><path d="m366 658 4 4 4-4" fill="none" stroke="#252525" stroke-width="1.5"/>
+<path d="M0 700h400" stroke="#e7e7e7"/>
+<text x="20" y="728" font-size="12" fill="#777" font-weight="400">Ready to insert. You can edit the details first.</text>
+<rect x="20" y="742" width="360" height="40" rx="6" fill="#7b3ff2" stroke="none"/><path d="M157 756v12M151 762h12" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><text x="173" y="766" font-size="12" fill="#fff" font-weight="500">Insert card</text>
+</g></g></svg>

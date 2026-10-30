@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Linkmark · Link cards</title>
+<style>
+:root{color-scheme:light;--bg:var(--figma-color-bg,#fff);--fg:var(--figma-color-text,#252525);--muted:var(--figma-color-text-secondary,#777);--line:var(--figma-color-border,#e7e7e7);--soft:var(--figma-color-bg-secondary,#f5f5f5);--accent:#7b3ff2;--accent-bg:#f2ecff}
+*{box-sizing:border-box}body{margin:0;color:var(--fg);background:var(--bg);font:12px/1.5 Inter,"Segoe UI","Microsoft YaHei",sans-serif}button,input,textarea{font:inherit}button{cursor:pointer}button:disabled{cursor:default;opacity:.45}button,input,textarea{outline:none}button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}button{color:inherit}svg{display:block;flex:none}button svg{pointer-events:none}[hidden]{display:none!important}
+.app{height:100vh;display:flex;flex-direction:column;max-width:480px;margin:0 auto}.head{padding:20px 20px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}.mark{width:32px;height:32px;display:grid;place-items:center;border:1px solid var(--line);border-radius:9px;background:var(--bg)}h1{font-size:15px;font-weight:600;margin:0}p{margin:0}.head p{color:var(--muted);margin-top:1px}.main{overflow-y:auto;flex:1;padding:20px}label,.label{font-weight:500;display:block;margin-bottom:7px}.input-row{display:flex;gap:8px}.input-wrap{position:relative;flex:1;min-width:0}.input-wrap svg{position:absolute;top:12px;left:11px;color:var(--muted)}input[type=url]{padding-left:35px}input,textarea{width:100%;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);padding:9px 10px;min-width:0}input{height:40px}textarea{resize:vertical;min-height:72px}.fetch{border:0;border-radius:6px;background:var(--accent);color:white;padding:0 14px;font-weight:500}.hint{font-size:11px;color:var(--muted);margin-top:9px;line-height:1.65}.preview-header{display:flex;align-items:center;justify-content:space-between;margin:24px 0 10px}.preview-header .label{margin:0}.tag{font-size:11px;color:var(--muted)}.stage{border:1px solid var(--line);border-radius:8px;background-color:var(--soft);background-image:radial-gradient(#cfcfcf 0.7px,transparent .7px);background-size:16px 16px;padding:22px 18px;min-height:280px;display:flex;align-items:center;justify-content:center}.empty{text-align:center;color:var(--muted);padding:22px 0}.empty svg{margin:0 auto 16px;color:#aaa}.empty strong{display:block;font-size:13px;color:var(--fg);font-weight:500;margin-bottom:5px}.text-button{padding:0;border:0;background:none;color:var(--accent);font-weight:500}.empty .text-button{margin-top:14px}.bookmark{background:white;color:#292929;border:1px solid #dcdcdc;border-radius:10px;overflow:hidden;box-shadow:0 2px 4px #00000012;width:100%;min-width:0}.cover{aspect-ratio:16/9;background:#ededed;overflow:hidden;border-bottom:1px solid #e6e6e6;position:relative}.cover img{display:block;width:100%;height:100%;object-fit:cover}.cover-fallback{position:absolute;inset:0;display:grid;place-items:center;color:#888;font-size:12px}.content{padding:17px;min-width:0;flex:1}.card-title{font-size:16px;line-height:1.4;font-weight:400;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}.card-description{font-size:12px;line-height:1.5;color:#858585;margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}.source{display:flex;gap:7px;align-items:center;color:#858585;margin-top:13px;font-size:12px;min-width:0}.source span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:underline;text-underline-offset:2px}.source img{width:14px;height:14px;object-fit:contain;flex:none}.bookmark.horizontal{display:flex;flex-direction:row-reverse}.horizontal .cover{width:104px;flex:none;aspect-ratio:auto;min-height:140px;border-bottom:0;border-left:1px solid #e6e6e6}.horizontal .content{padding:14px}.horizontal .card-title{font-size:14px}.horizontal .source{margin-top:10px}.horizontal .card-description{font-size:11px}.stage:has(.horizontal){min-height:210px}.toolbar{display:flex;align-items:center;justify-content:space-between;margin-top:16px}.segments{display:flex;background:var(--soft);padding:3px;border-radius:6px;border:1px solid var(--line)}.segments button{border:0;display:flex;align-items:center;gap:6px;border-radius:4px;background:transparent;padding:5px 10px;color:var(--muted)}.segments button[aria-pressed=true]{background:var(--bg);color:var(--fg);box-shadow:0 1px 3px #00000014}.dimension{font-size:11px;color:var(--muted)}details{margin-top:20px;border-top:1px solid var(--line);padding-top:14px}summary{display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none;font-weight:500}summary::-webkit-details-marker{display:none}details[open] summary svg{transform:rotate(180deg)}.fields{padding-top:16px;display:grid;gap:14px}.switch-row{display:flex;align-items:center;justify-content:space-between;margin:0}.switch-row input{appearance:none;width:28px;height:16px;background:#aaa;padding:0;border:0;border-radius:10px;position:relative;cursor:pointer}.switch-row input:checked{background:var(--accent)}.switch-row input:before{content:"";position:absolute;background:white;width:12px;height:12px;border-radius:50%;left:2px;top:2px}.switch-row input:checked:before{left:14px}.cover-actions{display:flex;gap:8px;align-items:center}.secondary{border:1px solid var(--line);background:var(--bg);padding:7px 12px;border-radius:6px}.cover-actions span{font-size:11px;color:var(--muted)}.footer{padding:14px 20px 18px;border-top:1px solid var(--line);background:var(--bg)}.status{font-size:12px;color:var(--muted);margin-bottom:10px;min-height:18px;line-height:1.5}.status[data-kind=error]{color:#c13838}.status[data-kind=success]{color:#278353}.insert{width:100%;height:40px;border:0;border-radius:6px;background:var(--accent);color:white;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px}.insert:disabled{background:var(--soft);color:var(--muted);opacity:1}.preview-note{background:#fff4cc;color:#654f12;padding:7px 20px;font-size:11px}.busy .stage{opacity:.55}.busy .fetch{cursor:progress}.spinning{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.spinning{animation:none}}@media(min-width:600px){body{background:#f4f4f4}.app{height:800px;margin:36px auto;background:var(--bg);border:1px solid #ddd;border-radius:12px;overflow:hidden;box-shadow:0 16px 48px #0000000d}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+ <div class="preview-note" id="standalone" hidden>UI preview · Run in Figma to insert a card</div>
+ <header class="head"><div class="mark"><svg width="18" height="20" viewBox="0 0 18 20" fill="none"><path d="M4 2.5h10a1 1 0 0 1 1 1v14l-6-4-6 4v-14a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.5"/></svg></div><div><h1>Linkmark</h1><p>Turn links into preview cards</p></div></header>
+ <main class="main">
+  <form id="link-form"><label for="url">URL</label><div class="input-row"><div class="input-wrap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input id="url" type="text" inputmode="url" placeholder="Paste a webpage URL…" autocomplete="off" spellcheck="false" style="padding-left:35px" aria-describedby="privacy"></div><button class="fetch" id="fetch" type="submit">Get preview</button></div></form>
+  <p class="hint" id="privacy">Get preview sends this URL to Microlink. Public pages only.<br>Or <a class="text-button" href="#editor" id="manual">enter details manually</a> without fetching the URL.</p>
+  <div class="preview-header"><span class="label">Card preview</span><span class="tag" id="preview-label">No URL yet</span></div>
+  <div class="stage" id="stage">
+   <div class="empty" id="empty"><svg width="76" height="62" viewBox="0 0 76 62" fill="none" aria-hidden="true"><rect x="8" y="7" width="60" height="48" rx="6" fill="white" stroke="#ccc"/><path d="M8 29h60" stroke="#ddd"/><rect x="17" y="15" width="16" height="7" rx="2" fill="#ececec"/><path d="m40 24 8-8 8 8" stroke="#ddd" stroke-width="2"/><path d="M17 38h39M17 45h25" stroke="#d6d6d6" stroke-width="3" stroke-linecap="round"/></svg><strong>Give your links a preview</strong><p>The cover, title and description will appear here.</p><button class="text-button" id="example" type="button">Try an example ↗</button></div>
+   <article class="bookmark" id="card" hidden><div class="cover" id="cover"><div class="cover-fallback" id="cover-fallback">Loading cover…</div><img id="cover-image" alt="Page cover" referrerpolicy="no-referrer" hidden></div><div class="content"><h2 class="card-title" id="card-title" style="margin:0"></h2><p class="card-description" id="card-description"></p><div class="source"><img id="logo" alt="" referrerpolicy="no-referrer" hidden><svg id="source-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span id="card-domain"></span></div></div></article>
+  </div>
+  <div class="toolbar"><div class="segments" role="group" aria-label="Card layout"><button type="button" data-layout="vertical" aria-pressed="true"><svg width="13" height="14" viewBox="0 0 13 14" fill="none"><rect x="1.5" y="1" width="10" height="12" rx="1.5" stroke="currentColor"/><path d="M2 7h9" stroke="currentColor"/></svg>Vertical</button><button type="button" data-layout="horizontal" aria-pressed="false"><svg width="15" height="13" viewBox="0 0 15 13" fill="none"><rect x="1" y="1.5" width="13" height="10" rx="1.5" stroke="currentColor"/><path d="M9 2v9" stroke="currentColor"/></svg>Horizontal</button></div><span class="dimension" id="dimension">360 px wide</span></div>
+  <details id="editor"><summary>Edit content<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="m4 5 3 3 3-3" stroke="currentColor" stroke-width="1.5"/></svg></summary><div class="fields"><div><label for="title">Title</label><input id="title" maxlength="240" placeholder="Page title"></div><div><label for="description">Description</label><textarea id="description" maxlength="600" placeholder="Add a short description (optional)"></textarea></div><label class="switch-row" for="show-image">Show cover<input id="show-image" type="checkbox" role="switch"></label><div><label for="image-url">Cover URL</label><input id="image-url" type="url" placeholder="https://…" spellcheck="false"></div><div class="cover-actions"><button id="upload" class="secondary" type="button">Upload cover</button><span>JPG, PNG, WebP · Up to 8 MB</span><input id="image-file" type="file" accept="image/png,image/jpeg,image/webp" hidden></div></div></details>
+ </main>
+ <footer class="footer"><p class="status" id="status" role="status" aria-live="polite">Paste a URL to fetch its title and cover.</p><button class="insert" id="insert" disabled><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span id="insert-label">Insert card</span></button></footer>
+</div>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const state = { url:'', title:'', description:'', imageUrl:'', logoUrl:'', imageBytes:null, localImage:'', showImage:false, layout:'vertical', host:false, fetching:false, inserting:false, uploading:false, revision:0 };
+let controller = null;
+let coverSrc = '';
+let logoSrc = '';
+const cache = new Map();
+function normalizeUrl(raw) {
+  let input = String(raw || '').trim();
+  if (!input) throw new Error('Paste a webpage URL first.');
+  if (input.length > 4096 || /[\s\\]/.test(input)) throw new Error('This URL does not look valid.');
+  if (!/^https?:\/\//i.test(input)) {
+    if (/^[a-z][a-z\d+.-]*:/i.test(input)) throw new Error('Only http and https URLs are supported.');
+    input = 'https://' + input;
+  }
+  let url;
+  try { url = new URL(input); } catch (_) { throw new Error('Enter a valid webpage URL.'); }
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || !url.hostname.includes('.') || url.hostname.includes(':')) throw new Error('Enter a complete URL without login credentials.');
+  return url.href;
+}
+function publicUrl(value) {
+  const url = new URL(value), h = url.hostname.toLowerCase();
+  if (/^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h) || /\.(local|internal|localhost)$/.test(h)) throw new Error('For internal links, enter details manually instead of fetching a preview.');
+  return value;
+}
+function safeImage(raw) { try { return raw ? normalizeUrl(raw) : ''; } catch (_) { return ''; } }
+function status(text, kind='') { $('status').textContent=text; $('status').dataset.kind=kind; }
+function post(message) { parent.postMessage({pluginMessage:message}, '*'); }
+function updateActions() {
+  const busy = state.fetching || state.inserting || state.uploading;
+  $('fetch').disabled=busy;
+  $('insert').disabled=busy || !state.host || !state.url || !state.title.trim() || (state.showImage && !state.imageUrl && !state.imageBytes);
+  $('insert-label').textContent=state.inserting ? 'Inserting…' : 'Insert card';
+  $('fetch').textContent=state.fetching ? 'Fetching…' : 'Get preview';
+  $('app').classList.toggle('busy', state.fetching);
+  $('stage').setAttribute('aria-busy', String(state.fetching));
+  ['url','title','description','image-url','show-image','upload','example'].forEach(id=>$(id).disabled=state.inserting || state.uploading);
+  if(state.fetching) ['title','description','image-url','show-image','upload','example'].forEach(id=>$(id).disabled=true);
+}
+function render() {
+  const present=!!state.url;
+  $('empty').hidden=present; $('card').hidden=!present;
+  $('card').classList.toggle('horizontal', state.layout==='horizontal');
+  $('card-title').textContent=state.title || 'Add a card title';
+  $('card-description').textContent=state.description;
+  $('card-description').hidden=!state.description;
+  $('card-domain').textContent=present ? new URL(state.url).hostname.replace(/^www\./,'') : '';
+  $('cover').hidden=!state.showImage;
+  const next=state.localImage || state.imageUrl;
+  if (next!==coverSrc) {
+    coverSrc=next; $('cover-image').hidden=true; $('cover-fallback').hidden=false;
+    $('cover-fallback').textContent=next ? 'Loading cover…' : 'Upload an image or add a cover URL';
+    if(next) $('cover-image').src=next; else $('cover-image').removeAttribute('src');
+  }
+  if (logoSrc!==state.logoUrl) {
+    logoSrc=state.logoUrl; $('logo').hidden=true; $('source-icon').hidden=false;
+    if(logoSrc) $('logo').src=logoSrc; else $('logo').removeAttribute('src');
+  }
+  $('dimension').textContent=(state.layout==='horizontal' ? 480 : 360)+' px wide';
+  document.querySelectorAll('[data-layout]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.layout===state.layout)));
+  updateActions();
+}
+function fillFields() { $('title').value=state.title; $('description').value=state.description; $('image-url').value=state.imageUrl; $('show-image').checked=state.showImage; }
+function resetData() { Object.assign(state,{url:'',title:'',description:'',imageUrl:'',logoUrl:'',imageBytes:null,localImage:'',showImage:false}); fillFields(); }
+function cancelFetch() { state.revision++; if(controller) controller.abort(); controller=null; state.fetching=false; }
+function applyMetadata(data, originalUrl) {
+  state.url=originalUrl;
+  state.title=String(data.title || data.publisher || new URL(originalUrl).hostname).slice(0,240);
+  state.description=String(data.description || '').slice(0,600);
+  state.imageUrl=safeImage(data.image && data.image.url);
+  state.logoUrl=safeImage(data.logo && data.logo.url);
+  state.imageBytes=null; state.localImage=''; state.showImage=!!state.imageUrl;
+  fillFields(); render();
+}
+async function fetchPreview() {
+  if(state.inserting || state.uploading || state.fetching) return;
+  let url;
+  try { url=publicUrl(normalizeUrl($('url').value)); } catch(error) { status(error.message,'error'); return; }
+  cancelFetch(); resetData();
+  const revision=state.revision;
+  controller=new AbortController();
+  const request=controller;
+  state.fetching=true; render(); $('preview-label').textContent='Fetching'; status('Fetching the title, description and cover…');
+  const timer=setTimeout(()=>request.abort(),25000);
+  try {
+    let data=cache.get(url);
+    if(!data) {
+      const response=await fetch('https://api.microlink.io/?url='+encodeURIComponent(url),{signal:request.signal,credentials:'omit',referrerPolicy:'no-referrer'});
+      if(response.status===429) throw new Error('The preview service has reached its daily limit. Enter details manually.');
+      if(!response.ok) throw new Error('The preview service is unavailable. Enter details manually.');
+      const result=await response.json();
+      if(result.status!=='success' || !result.data) throw new Error('Cannot read this page. Enter details manually.');
+      data=result.data;
+      if(cache.size>=20) cache.delete(cache.keys().next().value);
+      cache.set(url,data);
+    }
+    if(revision!==state.revision) return;
+    applyMetadata(data,url); $('preview-label').textContent='Preview ready';
+    status(state.showImage ? 'Ready to insert. You can edit the details first.' : 'No cover was found. Upload one or insert a text card.');
+  } catch(error) {
+    if(revision!==state.revision) return;
+    state.url=url; state.title=new URL(url).hostname.replace(/^www\./,''); fillFields();
+    $('editor').open=true; $('preview-label').textContent='Add details';
+    status(error.name==='AbortError' ? 'The request timed out. Retry or enter details manually.' : error.message,'error');
+  } finally {
+    clearTimeout(timer);
+    if(revision===state.revision) { state.fetching=false; render(); }
+  }
+}
+$('link-form').addEventListener('submit',event=>{event.preventDefault(); fetchPreview();});
+$('url').addEventListener('input',()=>{cancelFetch();resetData();$('preview-label').textContent='No URL yet';status('URL changed. Get a new preview or enter details manually.');render();});
+$('manual').addEventListener('click',event=>{
+  event.preventDefault(); if(state.inserting || state.uploading) return;
+  let url; try { url=normalizeUrl($('url').value); } catch(error) {status(error.message,'error');$('url').focus();return;}
+  cancelFetch(); if(state.url!==url) resetData(); state.url=url;
+  $('editor').open=true; $('preview-label').textContent='Manual entry'; status('Add a title and, optionally, upload a cover.'); render(); $('title').focus();
+});
+$('example').addEventListener('click',()=>{$('url').value='https://www.figma.com/figjam/';fetchPreview();});
+['title','description'].forEach(id=>$(id).addEventListener('input',()=>{state[id]=$(id).value; render();}));
+$('show-image').addEventListener('change',()=>{state.showImage=$('show-image').checked;render();});
+$('image-url').addEventListener('change',()=>{
+  const raw=$('image-url').value.trim(); const url=safeImage(raw);
+  if(raw && !url){state.imageUrl='';state.imageBytes=null;state.localImage='';state.showImage=true;render();status('Enter a valid image URL.','error');return;}
+  state.imageUrl=url;state.imageBytes=null;state.localImage='';state.showImage=!!url;fillFields();render();
+});
+document.querySelectorAll('[data-layout]').forEach(el=>el.addEventListener('click',()=>{if(state.inserting)return;state.layout=el.dataset.layout;render();}));
+$('cover-image').addEventListener('load',()=>{$('cover-image').hidden=false;$('cover-fallback').hidden=true;});
+$('cover-image').addEventListener('error',()=>{$('cover-image').hidden=true;$('cover-fallback').hidden=false;$('cover-fallback').textContent='Cover unavailable. Upload an image.';});
+$('logo').addEventListener('load',()=>{$('logo').hidden=false;$('source-icon').hidden=true;});
+$('logo').addEventListener('error',()=>{$('logo').hidden=true;$('source-icon').hidden=false;});
+$('upload').addEventListener('click',()=>$('image-file').click());
+$('image-file').addEventListener('change',async()=>{
+  const file=$('image-file').files[0]; if(!file)return;
+  if(file.size>8*1024*1024 || !['image/png','image/jpeg','image/webp'].includes(file.type)){status('Choose a JPG, PNG or WebP image up to 8 MB.','error');$('image-file').value='';return;}
+  cancelFetch(); state.uploading=true; updateActions(); status('Processing cover…');
+  let objectUrl='';
+  try {
+    objectUrl=URL.createObjectURL(file); const img=new Image(); img.src=objectUrl; await img.decode();
+    const ratio=Math.min(1,1600/Math.max(img.width,img.height)); const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(img.width*ratio));canvas.height=Math.max(1,Math.round(img.height*ratio));
+    canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+    const dataUrl=canvas.toDataURL('image/png');const binary=atob(dataUrl.split(',')[1]);
+    if(binary.length>6*1024*1024)throw new Error('The converted image is too large. Choose a smaller image.');
+    state.imageBytes=Array.from(binary,ch=>ch.charCodeAt(0));state.localImage=dataUrl;state.imageUrl='';state.showImage=true;
+    fillFields();status('Cover updated.');
+  }catch(error){status(error.message || 'Cannot read this image. Try a different one.','error');}
+  finally{if(objectUrl)URL.revokeObjectURL(objectUrl);state.uploading=false;$('image-file').value='';render();}
+});
+$('insert').addEventListener('click',()=>{
+  if($('insert').disabled)return;
+  state.inserting=true;updateActions();status('Creating editable layers…');
+  post({type:'insert',card:{url:state.url,title:state.title,description:state.description,imageUrl:state.imageUrl,logoUrl:state.logoUrl,imageBytes:state.imageBytes,showImage:state.showImage,layout:state.layout}});
+});
+window.addEventListener('message',event=>{
+  if(event.source!==parent)return;const message=event.data && event.data.pluginMessage;if(!message)return;
+  if(message.type==='init'){state.host=true;$('standalone').hidden=true;if(message.url && !$('url').value)$('url').value=message.url;render();}
+  if(message.type==='inserted'){state.inserting=false;status('Inserted. Edit the text and images in Figma.','success');render();}
+  if(message.type==='error'){state.inserting=false;status(message.message || 'Could not create the card. Please try again.','error');render();}
+});
+if(window.parent===window)$('standalone').hidden=false;
+render();post({type:'ready'});
+</script>
+</body>
+</html>

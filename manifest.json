@@ -1,0 +1,14 @@
+{
+  "name": "Linkmark",
+  "id": "linkmark-local",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["*"],
+    "reasoning": "Fetch public link metadata from api.microlink.io and preview images hosted on the websites chosen by the user. No credentials are used."
+  },
+  "relaunchButtons": [{ "command": "open", "name": "Create a link card" }]
+}

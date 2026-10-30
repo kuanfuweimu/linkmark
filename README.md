@@ -2,6 +2,8 @@
 
 Turn public links into editable bookmark cards in Figma Design.
 
+[Download the plugin](https://github.com/kuanfuweimu/linkmark/releases/tag/v0.1.0) · [Report an issue](https://github.com/kuanfuweimu/linkmark/issues)
+
 Paste a URL, preview its cover, title and description, then insert a clean card with a link to the original page. The default card takes its visual cues from FigJam bookmarks: an image above the content, a white surface, a fine border, soft corners and a source link.
 
 ![Linkmark UI design preview — sample content, not a runtime screenshot](assets/ui-preview.png)

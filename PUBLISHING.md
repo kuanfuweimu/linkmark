@@ -57,7 +57,7 @@ Linkmark is an independent plugin inspired by bookmark previews. It is not affil
 
 **Assets:** `assets/icon.png` (128 × 128) and `assets/community-cover.png` (1920 × 1080). The cover is a product illustration. Add real screenshots after editor testing if you want to show runtime evidence.
 
-**Support contact:** use the Issues URL of the published GitHub repository, or a support contact you control.
+**Support contact:** https://github.com/kuanfuweimu/linkmark/issues
 
 **Publisher:** select your personal profile. If a destination chooser appears, choose **Community**, not the company organization.
 

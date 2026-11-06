@@ -1,6 +1,6 @@
 # Release status / 发布状态
 
-Linkcard 0.3.1 is distributed as a GitHub prerelease for manual development-plugin installation. Figma Community publication has not been completed. The old assets/ui-preview files depict a retired editor and must not be used to advertise 0.3.1.
+Linkcard 0.3.2 is distributed as a GitHub prerelease for manual development-plugin installation. Figma Community publication has not been completed. The old assets/ui-preview files depict a retired editor and must not be used to advertise 0.3.2.
 
 Before publication, validate real Figma paste detection, hidden worker execution, raster import, movement during loading, multiple links, undo/redo, page switching and helper restart. Disclose the running-plugin requirement and optional Python helper. Do not claim always-on clipboard access, universal site support or editable/clickable text layers.
 

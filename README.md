@@ -1,16 +1,16 @@
-# Linkcard 0.3.1
+# Linkcard 0.3.2
 
 Fast, single-object preview cards for Figma Design. 快速生成可整张拖动的图片卡片。
 
-[Download v0.3.1](https://github.com/kuanfuweimu/linkmark/releases/tag/v0.3.1) · [Report an issue](https://github.com/kuanfuweimu/linkmark/issues)
+[Download v0.3.2](https://github.com/kuanfuweimu/linkmark/releases/tag/v0.3.2) · [Report an issue](https://github.com/kuanfuweimu/linkmark/issues)
 
 ## Use / 使用
 
-For a new installation, extract `Linkcard-0.3.1.zip`, then in Figma desktop choose Plugins → Development → Import plugin from manifest and select `Linkcard/manifest.json`. No Node.js build is needed to run the plugin. Python 3 is only required for the optional local preview helper.
+For a new installation, extract `Linkcard-0.3.2.zip`, then in Figma desktop choose Plugins → Development → Import plugin from manifest and select `Linkcard/manifest.json`. No Node.js build is needed to run the plugin. Python 3 is only required for the optional local preview helper.
 
 首次安装：解压下载包，在 Figma 桌面版开发插件菜单导入 `Linkcard/manifest.json`。运行插件无需构建；可选本机解析器需要 Python 3。
 
-1. Close the old Linkcard panel and run Linkcard again. The brief notification says **Linkcard 0.3.1 ready**; no editor panel opens.
+1. Close the old Linkcard panel and run Linkcard again. The brief notification says **Linkcard 0.3.2 ready**; no editor panel opens.
 2. Paste a public URL onto an empty part of the canvas. The plugin converts a newly created, selected, top-level URL text layer. It also handles an explicit user paste delivered to the hidden worker iframe.
 3. A single image card appears first. Metadata and cover update that same object when ready. You can move or resize it while waiting.
 
@@ -36,7 +36,7 @@ The old preview/editor, Upload cover, Use selection as cover, layout controls an
 
 ## Validation / 验证
 
-2026-11-06: 24 plugin regression checks and the official Plugin API typecheck passed for 0.3.1; 14 unchanged helper tests and a live HTTP/raster check passed for 0.3.0. Native Canvas2D rendered and decoded the actual 2× preview, including a separate Chinese/long-title case. No screen or browser UI automation was used.
+2026-11-06: 25 plugin regression checks and the official Plugin API typecheck passed for 0.3.2; 14 unchanged helper tests and a live HTTP/raster check passed for 0.3.0. Native Canvas2D rendered and decoded the actual 2× preview, including a separate Chinese/long-title case. No screen or browser UI automation was used.
 
 - Local first-card mock: 7.3 ms (excludes the 80 ms event debounce and real Figma IPC/image import).
 - One public Behance project: 2686 ms for metadata, cover and full raster; repeated cached build: 0.05 ms; final JPEG: 109029 bytes.
@@ -51,11 +51,11 @@ npm run check
 npm run test:helper
 ```
 
-Source / 源码: [kuanfuweimu/linkmark](https://github.com/kuanfuweimu/linkmark). Version 0.3.1 is a GitHub prerelease; Figma Community publication has not been completed. The repository keeps its original name for existing links.
+Source / 源码: [kuanfuweimu/linkmark](https://github.com/kuanfuweimu/linkmark). Version 0.3.2 is a GitHub prerelease; Figma Community publication has not been completed. The repository keeps its original name for existing links.
 
 Before replacing an existing installation, save a copy of that plugin folder. To roll back, restore that copy and reopen the plugin. Keep the imported folder path unchanged when updating an existing installation.
 
-中文：0.3.1 为 GitHub 预发布版，尚未发布 Figma Community。更新前保留原插件目录备份；回退时恢复备份并重开插件。现有导入目录应保留原路径。
+中文：0.3.2 为 GitHub 预发布版，尚未发布 Figma Community。更新前保留原插件目录备份；回退时恢复备份并重开插件。现有导入目录应保留原路径。
 
 ## 0.3.1 paste fix / 粘贴修复
 
@@ -66,3 +66,11 @@ An explicit paste delivered to the hidden iframe now creates a card even when no
 中文：修复页面事件字段读取错误，并接收隐藏窗口获得的用户粘贴事件。新增启动/首卡响应超时提示。0.3.0 在文档所定义的事件格式下可复现跳过转换，0.3.1 对应回归通过；当前用户的 Figma 实机结果仍待确认。
 
 API reference: https://developers.figma.com/docs/plugins/api/NodeChange/
+
+## 0.3.2 startup fix / 启动修复
+
+Removed the 1 px `showUI` width override. Figma documents a minimum width of 70 px, including hidden workers; Linkcard now uses Figma's default dimensions with `visible: false`. A startup notification identifies the loaded version before the iframe is created. Synchronous host startup errors now close the plugin with the actual error message. The test host enforces Figma's documented dimension limits instead of accepting invalid options.
+
+中文：去掉低于 Figma 最小宽度要求的1px窗口参数，使用默认尺寸且保持隐藏。加载时先显示0.3.2 starting，后台连接成功才显示ready；启动异常显示原始错误并退出。本机实际成功运行仍需验证，不能把模拟测试当作实机结论。
+
+API reference: https://developers.figma.com/docs/plugins/api/properties/figma-showui/

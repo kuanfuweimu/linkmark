@@ -1,6 +1,6 @@
 {
   "name": "linkcard-figma-plugin",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": true,
   "description": "Paste public URLs into fast, single-object image cards in Figma Design.",
   "scripts": {

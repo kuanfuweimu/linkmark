@@ -1,4 +1,4 @@
-// Linkcard 0.3.1: canvas-only, one image node per card.
+// Linkcard 0.3.2: canvas-only, one image node per card.
 let channel = '';
 let watchedPage;
 let timer;
@@ -134,7 +134,7 @@ figma.ui.onmessage = async message => {
     figma.ui.postMessage({ type: 'init', channel });
     if (!readyNotified) {
       readyNotified = true;
-      figma.notify('Linkcard 0.3.1 ready. Paste links onto the canvas.', { timeout: 6000 });
+      figma.notify('Linkcard 0.3.2 ready. Paste links onto the canvas.', { timeout: 6000 });
     }
     await flush();
     return;
@@ -155,7 +155,14 @@ function checkStartup() {
   if (!readyNotified) figma.notify('Linkcard could not start its image worker. Stop and run Linkcard again.', { error: true, timeout: 10000 });
 }
 const startupTimer = setTimeout(checkStartup, 6000);
-figma.showUI(__html__, { visible: false, width: 1, height: 1 });
-watchPage();
-figma.on('currentpagechange', watchPage);
-figma.on('selectionchange', () => { if (candidates.size) schedule(); });
+figma.notify('Linkcard 0.3.2 starting...', { timeout: 4000 });
+try {
+  // Keep Figma's valid default dimensions. Hidden does not waive size limits.
+  figma.showUI(__html__, { visible: false });
+  watchPage();
+  figma.on('currentpagechange', watchPage);
+  figma.on('selectionchange', () => { if (candidates.size) schedule(); });
+} catch (error) {
+  clearTimeout(startupTimer);
+  figma.closePlugin('Linkcard 0.3.2 startup failed: ' + String(error.message || error).slice(0, 160));
+}

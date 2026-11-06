@@ -5,6 +5,19 @@ const helperBase='http://127.0.0.1:43187';
 const cache=new Map(), pending=new Map(), seen=new Set(), queue=[];
 let active=0, connected=false, connectTimer, helperProbe=null, helperChecked=0;
 function post(message){parent.postMessage({pluginMessage:{...message,channel}},'*');}
+window.addEventListener('error',event=>post({type:'worker-error',message:event.message||'Script failed'}));
+window.addEventListener('unhandledrejection',event=>post({type:'worker-error',message:String(event.reason&&event.reason.message||'Unexpected worker failure')}));
+// If Figma leaves focus in the invisible iframe, handle that paste too.
+// This is a user paste event, not a system clipboard watcher.
+document.addEventListener('paste',event=>{
+  const raw=event.clipboardData&&event.clipboardData.getData('text/plain');
+  if(!raw)return;
+  const values=raw.trim().split(/\r?\n/).map(value=>value.trim()).filter(Boolean);
+  if(!values.length||values.length>20)return;
+  let urls;
+  try{urls=values.map(publicUrl);}catch(_){return;}
+  event.preventDefault();post({type:'direct-paste',urls});
+});
 function publicUrl(raw){
   const input=String(raw||'').trim();
   if(input.length>4096 || /[\s\\]/.test(input))throw Error('Invalid URL.');

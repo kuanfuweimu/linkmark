@@ -14,21 +14,21 @@ function host(){
   resize(w,h){this.width=w;this.height=h;},appendChild(n){this.children.push(n);n.parent=this;},setPluginData(k,v){this.data[k]=v;},getPluginData(k){return this.data[k]||'';},remove(){this.removed=true;this.parent.children=this.parent.children.filter(n=>n!==this);}};nodes.push(n);return n;}
  const page=node('PAGE');page.selection=[];page.handlers={};page.on=(t,f)=>page.handlers[t]=f;page.off=t=>delete page.handlers[t];
  const make=t=>{const n=node(t);page.appendChild(n);return n;};let uiOptions;
- const figma={command:'',currentPage:page,ui:{postMessage:m=>messages.push(m)},showUI:(h,o)=>uiOptions=o,on:(t,f)=>handlers[t]=f,getNodeByIdAsync:async id=>nodes.find(n=>n.id===id),
+ const figma={command:'',currentPage:page,viewport:{center:{x:1000,y:800}},ui:{postMessage:m=>messages.push(m)},showUI:(h,o)=>uiOptions=o,on:(t,f)=>handlers[t]=f,getNodeByIdAsync:async id=>nodes.find(n=>n.id===id),
   createRectangle:()=>make('RECTANGLE'),createImage:bytes=>{assert(bytes.length>8);return {hash:'image-'+(++images)};},notify:(text,o)=>notifications.push({text,o}),commitUndo(){}};
  const context=vm.createContext({figma,__html__:html,setTimeout:(fn,ms)=>{const t=setTimeout(fn,ms);t.unref();return t;},clearTimeout,Uint8Array,console});vm.runInContext(code,context);
  const run=s=>vm.runInContext(s,context);
  return {figma,page,nodes,messages,notifications,handlers,run,get uiOptions(){return uiOptions;},make};
 }
 function worker(fetcher){
- const sent=[],listeners={};
- const context=vm.createContext({window:{addEventListener:(name,fn)=>listeners[name]=fn},document:{createElement:name=>{assert.equal(name,'canvas');return createCanvas(1,1);}},parent:{postMessage:({pluginMessage:m})=>sent.push(m)},URL,Uint8Array,AbortController,Image:class{},fetch:fetcher,atob,btoa,console,
+ const sent=[],listeners={},documentEvents={};
+ const context=vm.createContext({window:{addEventListener:(name,fn)=>listeners[name]=fn},document:{addEventListener:(name,fn)=>documentEvents[name]=fn,createElement:name=>{assert.equal(name,'canvas');return createCanvas(1,1);}},parent:{postMessage:({pluginMessage:m})=>sent.push(m)},URL,Uint8Array,AbortController,Image:class{},fetch:fetcher,atob,btoa,console,
   setTimeout:(fn,ms)=>{const t=setTimeout(fn,ms);t.unref();return t;},clearTimeout});
  vm.runInContext(script,context);
  context.decode=async blob=>loadImage(Buffer.from(await blob.arrayBuffer()));
  const run=s=>vm.runInContext(s,context),channel=run('channel');
  const receive=m=>listeners.message({data:{pluginMessage:{...m,channel}}});receive({type:'init'});
- return {sent,context,run,receive,channel};
+ return {sent,context,run,receive,channel,documentEvents};
 }
 function link(fetcher){const s=host(),d=worker(fetcher);d.context.parent.postMessage=({pluginMessage:m})=>{d.sent.push(m);s.figma.ui.onmessage(m);};s.figma.ui.postMessage=m=>{s.messages.push(m);d.receive(m);};s.figma.ui.onmessage({type:'ready',channel:d.channel});return {s,d};}
 function pasted(s,url='https://example.com/article',origin='LOCAL'){const n=s.make('TEXT');n.characters=url;n.x=40;n.y=90;s.page.selection=[n];s.page.handlers.nodechange({nodeChanges:[{type:'CREATE',origin,id:n.id,node:n}]});return n;}
@@ -51,6 +51,11 @@ function network(calls=[]){return async url=>{calls.push(url);if(url.endsWith('/
  await test('page change does not apply late image work to another page',async()=>{const {s,d}=link(network());pasted(s);await s.run('flush()');const card=s.page.selection[0],hash=card.fills[0].imageHash;s.figma.currentPage={selection:[]};await settle(d);assert.equal(card.fills[0].imageHash,hash);});
  await test('existing edits, remote creations and nested text are ignored',async()=>{const s=host();await s.figma.ui.onmessage({type:'ready',channel:'a'});const t=pasted(s,undefined,'REMOTE');await s.run('flush()');assert(!t.removed);s.page.handlers.nodechange({nodeChanges:[{type:'PROPERTY_CHANGE',origin:'LOCAL',id:t.id,node:t}]});await s.run('flush()');const nested=pasted(s);nested.parent=s.make('FRAME');await s.run('flush()');assert.equal(s.messages.filter(m=>m.type==='render').length,0);});
  await test('early paste before handshake waits and then processes',async()=>{const s=host(),t=pasted(s);await s.run('flush()');assert.equal(s.messages.length,0);await s.figma.ui.onmessage({type:'ready',channel:'a'});assert.equal(s.messages.at(-1).sourceId,t.id);});
+ await test('documented page event with only type and node triggers a card',async()=>{const {s,d}=link(network());const t=s.make('TEXT');t.characters='https://example.com/event';s.page.selection=[t];s.page.handlers.nodechange({nodeChanges:[{type:'CREATE',node:t}]});await s.run('flush()');await settle(d);assert(t.removed,'CREATE without documentchange-only fields must not be discarded');assert.equal(s.page.selection[0].type,'RECTANGLE');});
+ await test('paste delivered to the hidden iframe makes cards without a canvas text node',async()=>{const {s,d}=link(network());let prevented=false;d.documentEvents.paste({clipboardData:{getData:()=> 'https://example.com/one\nhttps://example.com/two'},preventDefault(){prevented=true;}});await settle(d);assert(prevented);assert.equal(s.page.children.length,2);assert(s.page.children.every(n=>n.type==='RECTANGLE'));assert.equal(s.page.children[0].x,820);assert.equal(s.page.children[1].x,1204);assert.equal(s.run('initialReplies.size'),0);});
+ await test('non-link and private clipboard text is not intercepted',()=>{const {s,d}=link(network());for(const text of ['Some ordinary text','http://127.0.0.1/'])d.documentEvents.paste({clipboardData:{getData:()=>text},preventDefault(){throw Error('Unrelated paste intercepted');}});assert.equal(s.page.children.length,0);});
+ await test('missing worker startup produces an explicit error instead of silent running',async()=>{const s=host();s.run('checkStartup()');assert(s.notifications.at(-1).o.error);assert.match(s.notifications.at(-1).text,/could not start/);await s.figma.ui.onmessage({type:'ready',channel:'a'});const n=s.notifications.length;s.run('checkStartup()');assert.equal(s.notifications.length,n);assert.match(s.notifications.at(-1).text,/0.3.1 ready/);});
+ await test('new unselected nodes with no origin are not converted',async()=>{const {s,d}=link(network());const t=s.make('TEXT');t.characters='https://example.com/';s.page.handlers.nodechange({nodeChanges:[{type:'CREATE',node:t}]});await s.run('flush()');await settle(d);assert(!t.removed);assert.equal(s.page.children.length,1);});
  await test('private URLs and credentials do not reach preview services',async()=>{const calls=[];const d=worker(network(calls));for(const url of ['http://127.0.0.1/a','https://u:p@example.com','https://box.local/a','http://localhost./a','file:///tmp/a','http://example.com:1234'])d.receive({type:'render',sourceId:url,url});await settle(d);assert(calls.every(u=>u.endsWith('/health')));assert.equal(d.sent.filter(m=>m.type==='card').length,0);});
  await test('metadata failure keeps a movable fallback and allows a later retry',async()=>{const calls=[];const {s,d}=link(async url=>{calls.push(url);if(url.endsWith('/health'))return response({service:'linkmark'});throw Error('Unavailable');});pasted(s);await s.run('flush()');await settle(d);assert.equal(s.page.selection[0].type,'RECTANGLE');assert.equal(d.run('cache.size'),0);assert(s.notifications.some(n=>/unavailable/.test(n.text)));});
  await test('denied metadata is rejected instead of becoming the card title',()=>{const d=worker(network());assert.throws(()=>d.run("validate({title:'Access denied'})"));});

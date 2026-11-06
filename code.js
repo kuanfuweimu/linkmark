@@ -1,4 +1,4 @@
-// Linkcard 0.3.0: canvas-only, one image node per card.
+// Linkcard 0.3.1: canvas-only, one image node per card.
 let channel = '';
 let watchedPage;
 let timer;
@@ -7,6 +7,15 @@ const sources = new Map();
 const cards = new Map();
 const consumed = new Set();
 let readyNotified = false;
+let clipboardSerial = 0;
+const initialReplies = new Map();
+function requestCard(sourceId, url) {
+  initialReplies.set(sourceId, setTimeout(() => {
+    initialReplies.delete(sourceId);
+    if (sources.has(sourceId)) figma.notify('Linkcard detected the link, but the image worker did not respond. Stop and run Linkcard again.', { error: true, timeout: 8000 });
+  }, 5000));
+  figma.ui.postMessage({ type: 'render', channel, sourceId, url });
+}
 function urlFrom(text) {
   const value = typeof text === 'string' ? text.trim() : '';
   const url = /^www\./i.test(value) ? 'https://' + value : value;
@@ -30,14 +39,17 @@ async function flush() {
     if (!url || sources.has(id)) continue;
     candidates.delete(id);
     sources.set(id, { node, text: node.characters, url, page: figma.currentPage });
-    figma.ui.postMessage({ type: 'render', channel, sourceId: id, url });
+    requestCard(id, url);
   }
 }
 function observe(event) {
   for (const change of event.nodeChanges) {
-    if (change.origin !== 'LOCAL') continue;
-    if (change.type === 'CREATE' && !consumed.has(change.id) && eligible(change.node) && candidates.size < 20) {
-      candidates.set(change.id, Date.now());
+    // Page nodechange guarantees type + node. Unlike documentchange, origin/id
+    // may not exist. Keep explicit REMOTE filtering when a client supplies it.
+    if (change.origin === 'REMOTE') continue;
+    const id = change.node && change.node.id;
+    if (change.type === 'CREATE' && id && !consumed.has(id) && eligible(change.node) && candidates.size < 20) {
+      candidates.set(id, Date.now());
     }
   }
   if (candidates.size) schedule();
@@ -49,7 +61,18 @@ function watchPage() {
   watchedPage.on('nodechange', observe);
 }
 function unchanged(source) {
-  return source && source.page === figma.currentPage && eligible(source.node) && source.node.characters === source.text;
+  return source && source.page === figma.currentPage && (source.direct || eligible(source.node) && source.node.characters === source.text);
+}
+function receivePaste(urls) {
+  if (!Array.isArray(urls) || !urls.length || urls.length > 20) return;
+  const normalized = urls.map(urlFrom);
+  if (normalized.some(url => !url)) return;
+  const page = figma.currentPage, center = figma.viewport.center;
+  normalized.forEach((url, index) => {
+    const id = 'clipboard-' + (++clipboardSerial);
+    sources.set(id, { direct: true, page, text: url, url, x: center.x - 180 + (index % 4) * 384, y: center.y - 160 + Math.floor(index / 4) * 344 });
+    requestCard(id, url);
+  });
 }
 function validBytes(bytes) {
   return (Array.isArray(bytes) || bytes instanceof Uint8Array) && bytes.length > 8 && bytes.length <= 6 * 1024 * 1024;
@@ -80,7 +103,8 @@ function applyCard(message) {
   try {
     node = figma.createRectangle();
     node.resize(360, 320);
-    node.x = source.node.x; node.y = source.node.y;
+    node.x = source.direct ? source.x : source.node.x;
+    node.y = source.direct ? source.y : source.node.y;
     node.name = 'Card / ' + String(message.title || source.url).slice(0, 100);
     node.cornerRadius = 10;
     node.fills = [{ type: 'IMAGE', imageHash: hash, scaleMode: 'FILL' }];
@@ -90,10 +114,10 @@ function applyCard(message) {
     node.setPluginData('linkmark', JSON.stringify({ version: 3, url: source.url, title: message.title || '', flattened: true }));
     node.setPluginData('linkmarkOriginalText', source.text);
     const selected = figma.currentPage.selection;
-    if (selected.some(n => n.id === source.node.id)) figma.currentPage.selection = selected.map(n => n.id === source.node.id ? node : n);
+    if (source.direct) figma.currentPage.selection = [node];
+    else if (selected.some(n => n.id === source.node.id)) figma.currentPage.selection = selected.map(n => n.id === source.node.id ? node : n);
     cards.set(message.sourceId, { node, page: source.page, url: source.url, hash, final: message.final === true });
-    consumed.add(message.sourceId);
-    source.node.remove();
+    if (!source.direct) { consumed.add(message.sourceId); source.node.remove(); }
     sources.delete(message.sourceId);
     figma.commitUndo();
     if (cards.size > 100) cards.delete(cards.keys().next().value);
@@ -106,22 +130,31 @@ figma.ui.onmessage = async message => {
   if (!message || typeof message.type !== 'string') return;
   if (message.type === 'ready') {
     channel = message.channel;
+    clearTimeout(startupTimer);
     figma.ui.postMessage({ type: 'init', channel });
     if (!readyNotified) {
       readyNotified = true;
-      figma.notify('Linkcard 0.3.0 is running. Paste a URL onto the canvas.', { timeout: 4000 });
+      figma.notify('Linkcard 0.3.1 ready. Paste links onto the canvas.', { timeout: 6000 });
     }
     await flush();
     return;
   }
   if (message.channel !== channel) return;
+  if (message.type === 'direct-paste') receivePaste(message.urls);
+  if (message.type === 'worker-error') figma.notify('Linkcard worker error: ' + String(message.message || 'Unknown error').slice(0, 160), { error: true, timeout: 8000 });
   if (message.type === 'card') {
+    clearTimeout(initialReplies.get(message.sourceId));
+    initialReplies.delete(message.sourceId);
     try { applyCard(message); }
     catch (error) { figma.notify(error.message || 'Could not create card.', { error: true }); }
   }
   if (message.type === 'notice') figma.notify(String(message.text || '').slice(0, 220), { timeout: 4000, error: message.error === true });
 };
 // Hidden iframe performs metadata, image decoding and rasterization. No editor UI.
+function checkStartup() {
+  if (!readyNotified) figma.notify('Linkcard could not start its image worker. Stop and run Linkcard again.', { error: true, timeout: 10000 });
+}
+const startupTimer = setTimeout(checkStartup, 6000);
 figma.showUI(__html__, { visible: false, width: 1, height: 1 });
 watchPage();
 figma.on('currentpagechange', watchPage);

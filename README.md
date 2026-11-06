@@ -1,22 +1,22 @@
-# Linkcard 0.3.4
+# Linkcard 0.3.5
 
 Fast, single-object preview cards for Figma Design. 快速生成可整张拖动的图片卡片。
 
-当前开发源码为 0.3.4，加入原生标题超链接。用户已确认 0.3.3 分区粘贴正常；0.3.4 标题点击仍待实机确认，尚未发布对应下载包。 / Current development source 0.3.4 adds native title hyperlinks. The user confirmed Section paste works in 0.3.3; actual title clicks in 0.3.4 remain unverified and no corresponding download package has been published.
+当前开发源码为 0.3.5，改为 Group 并保留标题超链接。用户已确认 0.3.3 分区粘贴正常；0.3.5 标题点击仍待实机确认，尚未发布对应下载包。 / Current development source 0.3.5 uses Groups and retains native title hyperlinks. The user confirmed Section paste works in 0.3.3; actual title clicks in 0.3.5 remain unverified and no corresponding download package has been published.
 
 [上一预发布版 / Previous prerelease v0.3.2](https://github.com/kuanfuweimu/linkmark/releases/tag/v0.3.2) · [反馈问题 / Report an issue](https://github.com/kuanfuweimu/linkmark/issues)
 
 ## Use / 使用
 
-For a new installation of 0.3.4, download and extract the current repository source, then in Figma desktop choose Plugins → Development → Import plugin from manifest and select its `manifest.json`. No Node.js build is needed to run the plugin. Python 3 is only required for the optional local preview helper.
+For a new installation of 0.3.5, download and extract the current repository source, then in Figma desktop choose Plugins → Development → Import plugin from manifest and select its `manifest.json`. No Node.js build is needed to run the plugin. Python 3 is only required for the optional local preview helper.
 
-首次安装 0.3.4：下载并解压本仓库当前源码，在 Figma 桌面版开发插件菜单导入其中的 `manifest.json`。运行插件无需构建；可选本机解析器需要 Python 3。
+首次安装 0.3.5：下载并解压本仓库当前源码，在 Figma 桌面版开发插件菜单导入其中的 `manifest.json`。运行插件无需构建；可选本机解析器需要 Python 3。
 
-1. Close the old Linkcard instance and run Linkcard again. The brief notification says **Linkcard 0.3.4 ready**; no editor panel opens.
+1. Close the old Linkcard instance and run Linkcard again. The brief notification says **Linkcard 0.3.5 ready**; no editor panel opens.
 2. Paste a public URL onto an empty part of the canvas or inside a Section. The plugin converts a newly created, selected URL text layer under the page or visible, unlocked Sections. It also handles an explicit user paste delivered to the hidden worker iframe.
 3. A single image card appears first. Metadata and cover update that same object when ready. You can move or resize it while waiting.
 
-中文：停止旧实例后重新运行 Linkcard，看到 0.3.4 ready 提示后，在画布或分区空白处粘贴公开 URL。转换页面下或可见、未锁定分区内新建且选中的 URL 文字，也接收用户直接粘贴到隐藏窗口的链接。先出现可整张拖动的卡片，封面随后原位补齐；加载期间可移动、缩放。
+中文：停止旧实例后重新运行 Linkcard，看到 0.3.5 ready 提示后，在画布或分区空白处粘贴公开 URL。转换页面下或可见、未锁定分区内新建且选中的 URL 文字，也接收用户直接粘贴到隐藏窗口的链接。先出现可整张拖动的卡片，封面随后原位补齐；加载期间可移动、缩放。
 
 点击带下划线的标题打开来源链接；拖动封面或其他区域可整张移动。首次访问外部网站时 Figma 可能要求确认。旧版 0.3.x 卡片：停止插件，选中需要升级的旧卡，再 Run 即补上标题链接，不重新抓取网络内容。不扫描整页。
 
@@ -28,7 +28,7 @@ The old preview/editor, Upload cover, Use selection as cover, layout controls an
 
 ## Behavior / 行为
 
-- Each card is one movable Frame with a 720 × 640 JPEG background, displayed at 360 × 320, and a locked native title-link area inside. Inter Regular loads once per session after the first bitmap; failure retains the complete raster title.
+- Each card is one movable Group with a 720 × 640 JPEG background, displayed at 360 × 320, and a locked native title-link area inside. Inter Regular loads once per session after the first bitmap; failure retains the complete raster title.
 - Initial card generation does not wait for metadata, cover, favicon or Figma font loading.
 - Up to three previews run concurrently; duplicate requests share work. Up to 20 completed card images are cached in memory for the current plugin run.
 - A late cover does not reset position, scale, rotation or selection. Deleted cards and manually replaced image fills are left alone.
@@ -38,9 +38,9 @@ The old preview/editor, Upload cover, Use selection as cover, layout controls an
 
 分区内（含嵌套分区）的新粘贴已纳入转换；保留所在分区、局部坐标和层级顺序。已有文字、协作者的修改、Frame/组件内文字以及撤销恢复的 URL 不自动转换。 / Newly pasted Section text retains its parent, local coordinates and stacking order when replaced.
 
-卡片外层整体可拖动，内部仅标题链接区域为锁定的原生文字，封面和描述仍为图片。Inter Regular 在首卡之后加载，每次运行复用；加载失败保留完整图片标题。运行期间缩放会同步标题尺寸，停止插件后需要等比缩放请使用 Scale 工具（K）。停止插件不影响已经写入文档的标题链接。
+卡片外层为 Group，可整体拖动，内部仅标题链接区域为锁定的原生文字，封面和描述仍为图片。Inter Regular 在首卡之后加载，每次运行复用；加载失败保留完整图片标题。运行期间缩放会同步标题尺寸，停止插件后需要等比缩放请使用 Scale 工具（K）。停止插件不影响已经写入文档的标题链接。
 
-The outer card moves as one object; only its native title-link area is locked text, while cover and description remain rasterized. Resizing while the plugin runs updates title geometry. After stopping it, use the Scale tool (K) for proportional scaling. Existing native title links continue to work after the plugin stops.
+The outer Group moves as one object; only its native title-link area is locked text, while cover and description remain rasterized. Resizing while the plugin runs updates title geometry. After stopping it, use the Scale tool (K) for proportional scaling. Existing native title links continue to work after the plugin stops.
 
 **The plugin still must be started and remain running.** Closing it or starting another plugin stops conversion. This is not a native global paste extension and is not an always-on clipboard listener.
 
@@ -48,16 +48,16 @@ The outer card moves as one object; only its native title-link area is locked te
 
 ## Validation / 验证
 
-2026-11-06: 36 plugin regression checks and the official Plugin API typecheck passed for 0.3.4; 14 unchanged helper tests and a live HTTP/raster check passed for 0.3.0. Native Canvas2D rendered and decoded the actual 2× preview, including a separate Chinese/long-title case. No screen or browser UI automation was used.
+2026-11-06: 39 plugin regression checks and the official Plugin API typecheck passed for 0.3.5; 14 unchanged helper tests and a live HTTP/raster check passed for 0.3.0. Native Canvas2D rendered and decoded the actual 2× preview, including a separate Chinese/long-title case. No screen or browser UI automation was used.
 
-中文：0.3.4 通过 36 项插件回归及官方 API 类型检查。未修改的解析器在 0.3.0 时通过 14 项测试及真实 HTTP/图片生成检查。使用原生 Canvas2D 渲染、解码双倍分辨率预览及中文长标题；未使用屏幕或浏览器自动化。
+中文：0.3.5 通过 39 项插件回归及官方 API 类型检查。未修改的解析器在 0.3.0 时通过 14 项测试及真实 HTTP/图片生成检查。使用原生 Canvas2D 渲染、解码双倍分辨率预览及中文长标题；未使用屏幕或浏览器自动化。
 
 - Local first-card mock: 7.3 ms (excludes the 80 ms event debounce and real Figma IPC/image import).
 - One public Behance project: 2686 ms for metadata, cover and full raster; repeated cached build: 0.05 ms; final JPEG: 109029 bytes.
 - The old helper baseline for the same page was 2647 ms / 1596 ms across two requests, excluding Figma layer creation. These timings do not establish faster network retrieval. The change makes the initial object available earlier and removes repeat retrieval and editable-layer work.
-- The user confirmed real Section paste succeeds in 0.3.3. Real title clicks, font layout, locked-title interactions and legacy-upgrade undo in 0.3.4 still need confirmation. Native Canvas2D output is not a Figma or Chromium screenshot.
+- The user confirmed real Section paste succeeds in 0.3.3. Real title clicks, font layout, locked-title interactions and legacy-upgrade undo in 0.3.5 still need confirmation. Native Canvas2D output is not a Figma or Chromium screenshot.
 
-中文：实测证明本地首卡无需等待网络、重复链接复用缓存；没有宣称网页首次抓取本身变快。用户已确认 0.3.3 分区粘贴成功。0.3.4 的真实标题点击、字体布局、锁定交互和旧卡升级撤销仍待实机确认。
+中文：实测证明本地首卡无需等待网络、重复链接复用缓存；没有宣称网页首次抓取本身变快。用户已确认 0.3.3 分区粘贴成功。0.3.5 的真实标题点击、字体布局、锁定交互和旧卡升级撤销仍待实机确认。
 
 ```sh
 npm ci
@@ -108,7 +108,7 @@ FigJam provides native link previews, but `createLinkPreviewAsync` is FigJam-onl
 
 首卡不等待元数据、封面、favicon 或字体。最多三路预览并行，重复请求共用工作，每次运行内缓存最多 20 张完整卡片。封面晚到不重置位置、缩放、旋转或选择；已删除卡片及手动替换的填充保持不动。抓取失败保留首卡并提示，不永久缓存失败结果。原 URL 同时保存在插件数据及原生标题超链接，封面和描述保持图片形式。
 
-历史测量：本地首卡模拟 7.3 ms，不含 80 ms 防抖和真实 Figma IPC/图片导入。一条公开 Behance 链接的元数据、封面、完整栅格合计 2686 ms；缓存重复构建 0.05 ms，JPEG 109029 字节。旧辅助服务同页两次请求为 2647 / 1596 ms，不含 Figma 图层创建。这不证明网络变快，只说明首卡更早可用，减少重复抓取与可编辑图层处理。当前实机验证状态以上方 0.3.4 记录为准。
+历史测量：本地首卡模拟 7.3 ms，不含 80 ms 防抖和真实 Figma IPC/图片导入。一条公开 Behance 链接的元数据、封面、完整栅格合计 2686 ms；缓存重复构建 0.05 ms，JPEG 109029 字节。旧辅助服务同页两次请求为 2647 / 1596 ms，不含 Figma 图层创建。这不证明网络变快，只说明首卡更早可用，减少重复抓取与可编辑图层处理。当前实机验证状态以上方 0.3.5 记录为准。
 
 仓库保留旧名以兼容链接。更新前备份插件目录，替换时保留导入路径，回退恢复副本并重新运行；画布升级仍需 Figma Undo。
 
@@ -117,3 +117,10 @@ FigJam provides native link previews, but `createLinkPreviewAsync` is FigJam-onl
 
 ### 0.3.2 修复细节
 移除 1 px `showUI` 宽度，因为官方最小为 70 px，包括隐藏 worker；使用默认尺寸且 `visible:false`。iframe 创建前提示版本，同步宿主启动异常显示实际错误并关闭插件。测试宿主严格检查官方尺寸边界，不再放过无效值。真实桌面成功运行仍未确认。
+
+
+## 0.3.5 Group 卡片 / Group cards
+
+卡片外层改为原生 Group，内部仅图片矩形、锁定的标题白底矩形和锁定的超链接文字，不创建任何 Frame。停止旧实例，选中 0.3.4 Frame 卡片或 0.3.x 图片卡片，再运行 0.3.5，即原位转为 Group；保留图片、标题链接、分区、尺寸、位置、旋转和层级顺序，不重新抓取网络、不处理未选中卡片。新粘贴默认生成 Group。39 项回归及类型检查通过，实机拖动与转换撤销仍待确认。
+
+Cards now use a native Group containing only an image Rectangle, a locked title-background Rectangle and locked hyperlink text. No Frames are created. Stop the old instance, select 0.3.4 Frame cards or 0.3.x image cards, then run 0.3.5 to convert them in place. Images, source links, Section membership, size, position, rotation and stacking order are retained without network refetching or modifying unselected cards. New pastes create Groups. Thirty-nine regression checks and type checking pass; real dragging and conversion undo remain unverified.

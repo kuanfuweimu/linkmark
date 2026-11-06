@@ -102,3 +102,18 @@ The user's runtime log showed `parentType: SECTION, eligible: false`. The filter
 FigJam provides native link previews, but `createLinkPreviewAsync` is FigJam-only. Images cannot carry editor hyperlinks directly in Design, so this version uses a real TextNode hyperlink, locked by default to reduce accidental edits; users can explicitly unlock it. Figma controls clicks, hover and external-site confirmation; selection events never force the browser to open. Fonts do not block the first card. Only legacy cards selected on Run are upgraded. New tests cover source URLs, final titles, delayed/failed fonts, deletion/repaint guards, scaling and legacy upgrades. Restoring plugin files does not revert canvas upgrades; use Figma Undo for document changes.
 
 [FigJam API](https://developers.figma.com/docs/plugins/api/properties/figma-createlinkpreviewasync/) · [文字链接 / Text links](https://help.figma.com/hc/en-us/articles/360045942953-Add-links-to-text)
+
+
+## 中文补充：行为与历史测量
+
+首卡不等待元数据、封面、favicon 或字体。最多三路预览并行，重复请求共用工作，每次运行内缓存最多 20 张完整卡片。封面晚到不重置位置、缩放、旋转或选择；已删除卡片及手动替换的填充保持不动。抓取失败保留首卡并提示，不永久缓存失败结果。原 URL 同时保存在插件数据及原生标题超链接，封面和描述保持图片形式。
+
+历史测量：本地首卡模拟 7.3 ms，不含 80 ms 防抖和真实 Figma IPC/图片导入。一条公开 Behance 链接的元数据、封面、完整栅格合计 2686 ms；缓存重复构建 0.05 ms，JPEG 109029 字节。旧辅助服务同页两次请求为 2647 / 1596 ms，不含 Figma 图层创建。这不证明网络变快，只说明首卡更早可用，减少重复抓取与可编辑图层处理。当前实机验证状态以上方 0.3.4 记录为准。
+
+仓库保留旧名以兼容链接。更新前备份插件目录，替换时保留导入路径，回退恢复副本并重新运行；画布升级仍需 Figma Undo。
+
+### 0.3.1 修复细节
+页面监听从 `change.node.id` 读取 ID，不依赖未记录的 `origin` 或顶层 `id`；若提供明确 REMOTE 则忽略，新建文本必须选中。官方 `{type,node}` 事件格式的回归在 0.3.0 失败，在 0.3.1 通过。隐藏 iframe 收到明确粘贴时即使没有画布文本也可创建卡片。不增加系统剪贴板轮询或常驻辅助程序。worker 启动与图片响应缺失会提示错误，不再只留下通用 Running 状态。
+
+### 0.3.2 修复细节
+移除 1 px `showUI` 宽度，因为官方最小为 70 px，包括隐藏 worker；使用默认尺寸且 `visible:false`。iframe 创建前提示版本，同步宿主启动异常显示实际错误并关闭插件。测试宿主严格检查官方尺寸边界，不再放过无效值。真实桌面成功运行仍未确认。

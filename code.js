@@ -1,4 +1,4 @@
-// Linkcard 0.3.2: canvas-only, one image node per card.
+// Linkcard 0.3.3: canvas-only, one image node per card.
 let channel = '';
 let watchedPage;
 let timer;
@@ -21,9 +21,17 @@ function urlFrom(text) {
   const url = /^www\./i.test(value) ? 'https://' + value : value;
   return url.length <= 4096 && /^https?:\/\/[^\s/@?#:]+(?::\d{1,5})?(?:[/?#][^\s]*)?$/i.test(url) && !/[\x00-\x20\x7f\\]/.test(url) ? url : '';
 }
+function canvasContainer(parent) {
+  // 分区内的粘贴仍是画布粘贴。Section children are canvas content too.
+  while (parent && !parent.removed && parent.type === 'SECTION') {
+    if (!parent.visible || parent.locked) return false;
+    parent = parent.parent;
+  }
+  return parent === figma.currentPage;
+}
 function eligible(node) {
   return node && !node.removed && node.type === 'TEXT' && node.visible && !node.locked &&
-    node.parent === figma.currentPage && !node.getPluginData('linkmark');
+    canvasContainer(node.parent) && !node.getPluginData('linkmark');
 }
 function schedule() {
   clearTimeout(timer);
@@ -38,7 +46,7 @@ async function flush() {
     const url = urlFrom(node.characters);
     if (!url || sources.has(id)) continue;
     candidates.delete(id);
-    sources.set(id, { node, text: node.characters, url, page: figma.currentPage });
+    sources.set(id, { node, text: node.characters, url, page: figma.currentPage, parent: node.parent });
     requestCard(id, url);
   }
 }
@@ -61,7 +69,7 @@ function watchPage() {
   watchedPage.on('nodechange', observe);
 }
 function unchanged(source) {
-  return source && source.page === figma.currentPage && (source.direct || eligible(source.node) && source.node.characters === source.text);
+  return source && source.page === figma.currentPage && (source.direct || eligible(source.node) && source.node.parent === source.parent && source.node.characters === source.text);
 }
 function receivePaste(urls) {
   if (!Array.isArray(urls) || !urls.length || urls.length > 20) return;
@@ -83,7 +91,7 @@ function applyCard(message) {
   if (existing) {
     // Never recreate deleted cards or overwrite a fill the user has replaced.
     const node = existing.node;
-    if (node.removed || node.parent !== existing.page || figma.currentPage !== existing.page) return;
+    if (node.removed || figma.currentPage !== existing.page || !canvasContainer(node.parent)) return;
     const fills = node.fills;
     if (!Array.isArray(fills) || fills.length !== 1 || fills[0].type !== 'IMAGE' || fills[0].imageHash !== existing.hash) return;
     if (existing.final) return;
@@ -102,6 +110,9 @@ function applyCard(message) {
   let node;
   try {
     node = figma.createRectangle();
+    // 保留原分区及层级顺序，再设置局部坐标。Preserve parent/order before local coordinates.
+    const parent = source.direct ? source.page : source.parent;
+    if (!source.direct) parent.insertChild(parent.children.indexOf(source.node), node);
     node.resize(360, 320);
     node.x = source.direct ? source.x : source.node.x;
     node.y = source.direct ? source.y : source.node.y;
@@ -116,7 +127,7 @@ function applyCard(message) {
     const selected = figma.currentPage.selection;
     if (source.direct) figma.currentPage.selection = [node];
     else if (selected.some(n => n.id === source.node.id)) figma.currentPage.selection = selected.map(n => n.id === source.node.id ? node : n);
-    cards.set(message.sourceId, { node, page: source.page, url: source.url, hash, final: message.final === true });
+    cards.set(message.sourceId, { node, page: source.page, parent, url: source.url, hash, final: message.final === true });
     if (!source.direct) { consumed.add(message.sourceId); source.node.remove(); }
     sources.delete(message.sourceId);
     figma.commitUndo();
@@ -134,7 +145,7 @@ figma.ui.onmessage = async message => {
     figma.ui.postMessage({ type: 'init', channel });
     if (!readyNotified) {
       readyNotified = true;
-      figma.notify('Linkcard 0.3.2 ready. Paste links onto the canvas.', { timeout: 6000 });
+      figma.notify('Linkcard 0.3.3 ready / 已就绪，可在画布或分区内粘贴链接。', { timeout: 6000 });
     }
     await flush();
     return;
@@ -155,7 +166,7 @@ function checkStartup() {
   if (!readyNotified) figma.notify('Linkcard could not start its image worker. Stop and run Linkcard again.', { error: true, timeout: 10000 });
 }
 const startupTimer = setTimeout(checkStartup, 6000);
-figma.notify('Linkcard 0.3.2 starting...', { timeout: 4000 });
+figma.notify('Linkcard 0.3.3 starting...', { timeout: 4000 });
 try {
   // Keep Figma's valid default dimensions. Hidden does not waive size limits.
   figma.showUI(__html__, { visible: false });
@@ -164,5 +175,5 @@ try {
   figma.on('selectionchange', () => { if (candidates.size) schedule(); });
 } catch (error) {
   clearTimeout(startupTimer);
-  figma.closePlugin('Linkcard 0.3.2 startup failed: ' + String(error.message || error).slice(0, 160));
+  figma.closePlugin('Linkcard 0.3.3 startup failed: ' + String(error.message || error).slice(0, 160));
 }

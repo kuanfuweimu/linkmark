@@ -1,8 +1,10 @@
-# Linkcard 0.3.2
+# Linkcard 0.3.3
 
 Fast, single-object preview cards for Figma Design. 快速生成可整张拖动的图片卡片。
 
-[Download v0.3.2](https://github.com/kuanfuweimu/linkmark/releases/tag/v0.3.2) · [Report an issue](https://github.com/kuanfuweimu/linkmark/issues)
+本机开发版为 0.3.3，Section 粘贴修复等待 Figma 实机确认，尚未发布下载包。 / Local development version 0.3.3 includes the Section paste fix; actual Figma verification is pending and no download package has been published for it.
+
+[上一预发布版 / Previous prerelease v0.3.2](https://github.com/kuanfuweimu/linkmark/releases/tag/v0.3.2) · [反馈问题 / Report an issue](https://github.com/kuanfuweimu/linkmark/issues)
 
 ## Use / 使用
 
@@ -10,11 +12,11 @@ For a new installation, extract `Linkcard-0.3.2.zip`, then in Figma desktop choo
 
 首次安装：解压下载包，在 Figma 桌面版开发插件菜单导入 `Linkcard/manifest.json`。运行插件无需构建；可选本机解析器需要 Python 3。
 
-1. Close the old Linkcard panel and run Linkcard again. The brief notification says **Linkcard 0.3.2 ready**; no editor panel opens.
-2. Paste a public URL onto an empty part of the canvas. The plugin converts a newly created, selected, top-level URL text layer. It also handles an explicit user paste delivered to the hidden worker iframe.
+1. Close the old Linkcard instance and run Linkcard again. The brief notification says **Linkcard 0.3.3 ready**; no editor panel opens.
+2. Paste a public URL onto an empty part of the canvas or inside a Section. The plugin converts a newly created, selected URL text layer under the page or visible, unlocked Sections. It also handles an explicit user paste delivered to the hidden worker iframe.
 3. A single image card appears first. Metadata and cover update that same object when ready. You can move or resize it while waiting.
 
-中文：关闭旧面板后重新运行 Linkcard，看到 0.3.1 提示后在画布空白处粘贴 URL。先出现可整张拖动的卡片，封面随后补齐；不会拆成标题、描述、封面等多层对象。
+中文：停止旧实例后重新运行 Linkcard，看到 0.3.3 ready 提示后，在画布或分区空白处粘贴公开 URL。转换页面下或可见、未锁定分区内新建且选中的 URL 文字，也接收用户直接粘贴到隐藏窗口的链接。先出现可整张拖动的图片卡片，封面随后原位补齐；加载期间可移动、缩放。
 
 The old preview/editor, Upload cover, Use selection as cover, layout controls and Reconnect panel have been removed. No system clipboard watcher or startup task was added. The existing optional local HTTP helper is unchanged; `Start-Linkcard.ps1` starts it on 127.0.0.1:43187 if needed. Without it, public preview services are attempted.
 
@@ -28,7 +30,9 @@ The old preview/editor, Upload cover, Use selection as cover, layout controls an
 - A late cover does not reset position, scale, rotation or selection. Deleted cards and manually replaced image fills are left alone.
 - Failed retrieval retains the initial card and reports the limitation. Failed results are not cached permanently.
 - Original URL is retained as plugin data. The flattened card has no editable text or text hyperlink; it is a movable image, not a live website embed.
-- Existing text, collaborators' changes, nested text and undo-restored URLs are not automatically converted.
+- Existing text, collaborators' changes, text inside Frames/components, and undo-restored URLs are not automatically converted. Section children are supported, including nested Sections.
+
+分区内（含嵌套分区）的新粘贴已纳入转换；保留所在分区、局部坐标和层级顺序。已有文字、协作者的修改、Frame/组件内文字以及撤销恢复的 URL 不自动转换。 / Newly pasted Section text retains its parent, local coordinates and stacking order when replaced.
 
 **The plugin still must be started and remain running.** Closing it or starting another plugin stops conversion. This is not a native global paste extension and is not an always-on clipboard listener.
 
@@ -36,14 +40,16 @@ The old preview/editor, Upload cover, Use selection as cover, layout controls an
 
 ## Validation / 验证
 
-2026-11-06: 25 plugin regression checks and the official Plugin API typecheck passed for 0.3.2; 14 unchanged helper tests and a live HTTP/raster check passed for 0.3.0. Native Canvas2D rendered and decoded the actual 2× preview, including a separate Chinese/long-title case. No screen or browser UI automation was used.
+2026-11-06: 30 plugin regression checks and the official Plugin API typecheck passed for 0.3.3; 14 unchanged helper tests and a live HTTP/raster check passed for 0.3.0. Native Canvas2D rendered and decoded the actual 2× preview, including a separate Chinese/long-title case. No screen or browser UI automation was used.
+
+中文：0.3.3 通过 30 项插件回归及官方 API 类型检查。未修改的解析器在 0.3.0 时通过 14 项测试及真实 HTTP/图片生成检查。使用原生 Canvas2D 渲染、解码双倍分辨率预览及中文长标题；未使用屏幕或浏览器自动化。
 
 - Local first-card mock: 7.3 ms (excludes the 80 ms event debounce and real Figma IPC/image import).
 - One public Behance project: 2686 ms for metadata, cover and full raster; repeated cached build: 0.05 ms; final JPEG: 109029 bytes.
 - The old helper baseline for the same page was 2647 ms / 1596 ms across two requests, excluding Figma layer creation. These timings do not establish faster network retrieval. The change makes the initial object available earlier and removes repeat retrieval and editable-layer work.
-- Figma desktop paste, hidden iframe execution, rendering, drag interactions and undo remain unverified. Native Canvas2D output is not a Figma or Chromium screenshot.
+- The user's diagnostic screenshot confirms host/worker handshake and a real CREATE event for TEXT under SECTION, rejected by the old filter. Actual card creation, hidden execution, dragging and undo after this fix still need confirmation. Native Canvas2D output is not a Figma or Chromium screenshot.
 
-中文：实测证明本地首卡无需等待网络、重复链接复用缓存；没有宣称网页首次抓取本身变快。Figma 实际粘贴、后台运行、拖动及撤销仍需用户实机确认。
+中文：实测证明本地首卡无需等待网络、重复链接复用缓存；没有宣称网页首次抓取本身变快。用户诊断截图确认主脚本和后台握手完成，Section 内 TEXT 的 CREATE 事件被旧过滤器跳过。修复后的实际生成、隐藏运行、拖动和撤销仍待实机确认。
 
 ```sh
 npm ci
@@ -74,3 +80,9 @@ Removed the 1 px `showUI` width override. Figma documents a minimum width of 70 
 中文：去掉低于 Figma 最小宽度要求的1px窗口参数，使用默认尺寸且保持隐藏。加载时先显示0.3.2 starting，后台连接成功才显示ready；启动异常显示原始错误并退出。本机实际成功运行仍需验证，不能把模拟测试当作实机结论。
 
 API reference: https://developers.figma.com/docs/plugins/api/properties/figma-showui/
+
+## 0.3.3 分区粘贴修复 / Section paste fix
+
+根据用户实际日志中的 `parentType: SECTION, eligible: false` 修复仅允许页面直属文字的条件。支持可见且未锁定的分区及嵌套分区，按原父级、坐标与层级顺序替换为图片；在同页分区间拖动加载中的卡片也能继续更新封面。移除临时诊断窗口，恢复隐藏模式。新增回归先在旧代码上失败，修复后通过；不将模拟测试当作实机成功。
+
+The user's runtime log showed `parentType: SECTION, eligible: false`. The filter now accepts visible, unlocked Sections and nested Sections, replacing text under its original parent at its local position and stacking order. Moving a loading card between Sections on the same page still allows its cover to update. The temporary diagnostic panel is removed and hidden mode restored. The new regression failed on the old code and passed after the fix; simulated checks do not establish real Figma success.

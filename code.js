@@ -1,4 +1,4 @@
-// Linkcard 0.3.3: canvas-only, one image node per card.
+// Linkcard 0.3.4: one movable card with a native linked title.
 let channel = '';
 let watchedPage;
 let timer;
@@ -9,6 +9,114 @@ const consumed = new Set();
 let readyNotified = false;
 let clipboardSerial = 0;
 const initialReplies = new Map();
+const linkedCards = new Map();
+const titleFont = { family: 'Inter', style: 'Regular' };
+let titleFontPromise;
+function loadTitleFont() {
+  if (!titleFontPromise) titleFontPromise = figma.loadFontAsync(titleFont).catch(error => {
+    figma.notify('标题链接未能加载，图片卡片已保留 / Title link unavailable; image card kept.', { error: true, timeout: 6000 });
+    throw error;
+  });
+  return titleFontPromise;
+}
+function currentImage(record) {
+  const node = record.node;
+  if (node.removed || figma.currentPage !== record.page || !canvasContainer(node.parent)) return false;
+  const fills = node.fills;
+  return Array.isArray(fills) && fills.length === 1 && fills[0].type === 'IMAGE' && fills[0].imageHash === record.hash;
+}
+function layoutTitle(record) {
+  const { node, plate, label } = record;
+  if (!plate || plate.removed || !label || label.removed) return;
+  const sx = node.width / 360, sy = node.height / 320;
+  plate.resize(332 * sx, 50 * sy); plate.x = 14 * sx; plate.y = 189 * sy;
+  label.fontSize = Math.max(1, 16 * Math.min(sx, sy));
+  label.lineHeight = { unit: 'PIXELS', value: Math.max(1, 22 * sy) };
+  label.resize(324 * sx, 44 * sy); label.x = 4 * sx; label.y = 4 * sy;
+}
+async function updateTitle(record) {
+  // 不阻塞首卡；字体失败时保留完整图片标题。Never block the first bitmap on fonts.
+  const revision = record.revision = (record.revision || 0) + 1;
+  try {
+    await loadTitleFont();
+    if (revision !== record.revision || !currentImage(record)) return;
+    let plate = record.plate, label = record.label;
+    if (plate && (plate.removed || label.removed)) return;
+    if (!plate) {
+      plate = figma.createFrame();
+      record.plate = plate;
+      plate.visible = false;
+      record.node.appendChild(plate);
+      plate.name = '标题链接 / Title link';
+      plate.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
+      plate.clipsContent = true;
+      plate.constraints = { horizontal: 'SCALE', vertical: 'SCALE' };
+      label = figma.createText();
+      record.label = label;
+      plate.appendChild(label);
+      label.fontName = titleFont;
+      label.fills = [{ type: 'SOLID', color: { r: 0.16, g: 0.16, b: 0.16 } }];
+      label.textAutoResize = 'TRUNCATE';
+      label.textTruncation = 'ENDING';
+      label.maxLines = 2;
+      label.constraints = { horizontal: 'SCALE', vertical: 'SCALE' };
+      label.locked = true;
+      plate.locked = true;
+    }
+    label.characters = String(record.title || record.url).replace(/\s+/g, ' ').trim().slice(0, 1000);
+    label.hyperlink = { type: 'URL', value: record.url };
+    label.textDecoration = 'UNDERLINE';
+    label.name = '打开原网页 / Open source';
+    layoutTitle(record);
+    plate.visible = true;
+  } catch (_) {
+    if (record.plate && !record.plate.removed) record.plate.visible = false;
+  }
+}
+function rememberCard(record) {
+  linkedCards.set(record.node.id, record);
+  if (linkedCards.size > 200) linkedCards.delete(linkedCards.keys().next().value);
+  void updateTitle(record);
+}
+function upgradeSelectedCards() {
+  // 只升级运行时选中的旧卡，不扫描整页。Upgrade only selected legacy cards on Run.
+  const replacements = new Map();
+  const selected = figma.currentPage.selection;
+  for (const original of selected) {
+    if (original.type !== 'RECTANGLE' || original.locked || !original.visible || !canvasContainer(original.parent)) continue;
+    let data;
+    try { data = JSON.parse(original.getPluginData('linkmark')); } catch (_) { continue; }
+    if (!data || data.version !== 3 || !data.flattened || !urlFrom(data.url)) continue;
+    const fills = original.fills;
+    if (!Array.isArray(fills) || fills.length !== 1 || fills[0].type !== 'IMAGE') continue;
+    let node;
+    try {
+      node = figma.createFrame();
+      original.parent.insertChild(original.parent.children.indexOf(original), node);
+      node.resize(original.width, original.height);
+      node.x = original.x; node.y = original.y;
+      node.rotation = original.rotation;
+      node.name = original.name;
+      node.fills = fills;
+      node.strokes = original.strokes;
+      node.strokeWeight = original.strokeWeight;
+      node.strokeAlign = original.strokeAlign;
+      node.cornerRadius = original.cornerRadius;
+      node.effects = original.effects;
+      node.opacity = original.opacity;
+      node.clipsContent = true;
+      node.setPluginData('linkmark', JSON.stringify({ version: 4, url: data.url, title: data.title || '', linkedTitle: true }));
+      node.setPluginData('linkmarkOriginalText', original.getPluginData('linkmarkOriginalText'));
+      original.remove();
+      replacements.set(original.id, node);
+      rememberCard({ node, page: figma.currentPage, url: data.url, title: data.title || data.url, hash: fills[0].imageHash, final: true });
+    } catch (_) { if (node && !node.removed) node.remove(); }
+  }
+  if (replacements.size) {
+    figma.currentPage.selection = selected.map(node => replacements.get(node.id) || node);
+    figma.commitUndo();
+  }
+}
 function requestCard(sourceId, url) {
   initialReplies.set(sourceId, setTimeout(() => {
     initialReplies.delete(sourceId);
@@ -55,6 +163,8 @@ function observe(event) {
     // Page nodechange guarantees type + node. Unlike documentchange, origin/id
     // may not exist. Keep explicit REMOTE filtering when a client supplies it.
     if (change.origin === 'REMOTE') continue;
+    const linked = change.node && linkedCards.get(change.node.id);
+    if (linked && change.type === 'PROPERTY_CHANGE' && currentImage(linked)) layoutTitle(linked);
     const id = change.node && change.node.id;
     if (change.type === 'CREATE' && id && !consumed.has(id) && eligible(change.node) && candidates.size < 20) {
       candidates.set(id, Date.now());
@@ -92,15 +202,16 @@ function applyCard(message) {
     // Never recreate deleted cards or overwrite a fill the user has replaced.
     const node = existing.node;
     if (node.removed || figma.currentPage !== existing.page || !canvasContainer(node.parent)) return;
-    const fills = node.fills;
-    if (!Array.isArray(fills) || fills.length !== 1 || fills[0].type !== 'IMAGE' || fills[0].imageHash !== existing.hash) return;
+    if (!currentImage(existing)) return;
     if (existing.final) return;
     const hash = figma.createImage(new Uint8Array(message.bytes)).hash;
     node.fills = [{ type: 'IMAGE', imageHash: hash, scaleMode: 'FILL' }];
     node.name = 'Card / ' + String(message.title || existing.url).slice(0, 100);
-    node.setPluginData('linkmark', JSON.stringify({ version: 3, url: existing.url, title: message.title || '', flattened: true }));
+    node.setPluginData('linkmark', JSON.stringify({ version: 4, url: existing.url, title: message.title || '', linkedTitle: true }));
     existing.hash = hash;
+    existing.title = message.title || existing.url;
     existing.final = message.final === true;
+    void updateTitle(existing);
     // Preserve position, selection, scale and rotation while the preview arrives.
     return;
   }
@@ -109,7 +220,8 @@ function applyCard(message) {
   const hash = figma.createImage(new Uint8Array(message.bytes)).hash;
   let node;
   try {
-    node = figma.createRectangle();
+    node = figma.createFrame();
+    node.clipsContent = true;
     // 保留原分区及层级顺序，再设置局部坐标。Preserve parent/order before local coordinates.
     const parent = source.direct ? source.page : source.parent;
     if (!source.direct) parent.insertChild(parent.children.indexOf(source.node), node);
@@ -122,15 +234,17 @@ function applyCard(message) {
     node.strokes = [{ type: 'SOLID', color: { r: 0.88, g: 0.88, b: 0.88 } }];
     node.strokeWeight = 1;
     node.strokeAlign = 'INSIDE';
-    node.setPluginData('linkmark', JSON.stringify({ version: 3, url: source.url, title: message.title || '', flattened: true }));
+    node.setPluginData('linkmark', JSON.stringify({ version: 4, url: source.url, title: message.title || '', linkedTitle: true }));
     node.setPluginData('linkmarkOriginalText', source.text);
     const selected = figma.currentPage.selection;
     if (source.direct) figma.currentPage.selection = [node];
     else if (selected.some(n => n.id === source.node.id)) figma.currentPage.selection = selected.map(n => n.id === source.node.id ? node : n);
-    cards.set(message.sourceId, { node, page: source.page, parent, url: source.url, hash, final: message.final === true });
+    const record = { node, page: source.page, url: source.url, title: message.title || source.url, hash, final: message.final === true };
+    cards.set(message.sourceId, record);
     if (!source.direct) { consumed.add(message.sourceId); source.node.remove(); }
     sources.delete(message.sourceId);
     figma.commitUndo();
+    rememberCard(record);
     if (cards.size > 100) cards.delete(cards.keys().next().value);
   } catch (error) {
     if (node && !node.removed) node.remove();
@@ -145,7 +259,8 @@ figma.ui.onmessage = async message => {
     figma.ui.postMessage({ type: 'init', channel });
     if (!readyNotified) {
       readyNotified = true;
-      figma.notify('Linkcard 0.3.3 ready / 已就绪，可在画布或分区内粘贴链接。', { timeout: 6000 });
+      figma.notify('Linkcard 0.3.4 ready / 已就绪，可在画布或分区内粘贴链接。', { timeout: 6000 });
+      upgradeSelectedCards();
     }
     await flush();
     return;
@@ -166,7 +281,7 @@ function checkStartup() {
   if (!readyNotified) figma.notify('Linkcard could not start its image worker. Stop and run Linkcard again.', { error: true, timeout: 10000 });
 }
 const startupTimer = setTimeout(checkStartup, 6000);
-figma.notify('Linkcard 0.3.3 starting...', { timeout: 4000 });
+figma.notify('Linkcard 0.3.4 starting...', { timeout: 4000 });
 try {
   // Keep Figma's valid default dimensions. Hidden does not waive size limits.
   figma.showUI(__html__, { visible: false });
@@ -175,5 +290,5 @@ try {
   figma.on('selectionchange', () => { if (candidates.size) schedule(); });
 } catch (error) {
   clearTimeout(startupTimer);
-  figma.closePlugin('Linkcard 0.3.3 startup failed: ' + String(error.message || error).slice(0, 160));
+  figma.closePlugin('Linkcard 0.3.4 startup failed: ' + String(error.message || error).slice(0, 160));
 }

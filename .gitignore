@@ -6,3 +6,7 @@ node_modules/
 .DS_Store
 Thumbs.db
 dist/
+
+.runtime/
+__pycache__/
+*.pyc

@@ -1,14 +1,17 @@
 {
-  "name": "Linkmark",
+  "name": "Linkcard",
   "id": "linkmark-local",
   "api": "1.0.0",
   "main": "code.js",
   "ui": "ui.html",
-  "editorType": ["figma"],
+  "editorType": [
+    "figma"
+  ],
   "documentAccess": "dynamic-page",
   "networkAccess": {
-    "allowedDomains": ["*"],
-    "reasoning": "Fetch public link metadata from api.microlink.io and preview images hosted on the websites chosen by the user. No credentials are used."
-  },
-  "relaunchButtons": [{ "command": "open", "name": "Create a link card" }]
+    "allowedDomains": [
+      "*"
+    ],
+    "reasoning": "Fetch public link previews using the optional local helper at 127.0.0.1:43187, Microlink, and public video providers; import user-selected public cover images. No account credentials are used."
+  }
 }

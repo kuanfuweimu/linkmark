@@ -1,21 +1,18 @@
-# Privacy
+# Privacy / 隐私说明
 
-Linkmark creates static bookmark cards in Figma Design.
+Linkcard watches only newly created, selected, local top-level URL text on the current Figma page while the plugin is running. It does not read the Windows clipboard, scan existing documents or start automatically.
 
-## Network requests
+## Network
 
-Selecting **Get preview** sends the entered URL to `https://api.microlink.io/` to retrieve public page metadata. Microlink processes that URL under its own service terms and privacy practices. The URL may include its path and query parameters, so only submit public links you intend to share with this service.
+- The unchanged optional helper binds to 127.0.0.1:43187 and fetches public pages/images. It logs no request URLs and keeps no URL-history database.
+- Public Behance projects use an in-memory anonymous visitor session. No browser profile, login cookie, account token or personal browser data is read.
+- The helper rejects private/reserved generic destinations, credentials and nonstandard ports, validates redirect destinations and preserves TLS hostname verification.
+- If a local Windows proxy uses Fake-IP DNS, the helper can resolve public hostnames through dns.alidns.com before tunneling to a validated public IP. The resolver receives the hostname. Fixed Behance project/CDN hosts retain the existing proxy and same-host redirect checks.
+- If local retrieval fails, the public URL including query parameters may go to api.microlink.io or public video oEmbed providers. Covers are fetched through the helper or their public hosts.
+- No website icons, uploaded covers or selected-canvas artwork are requested in 0.3.0.
 
-Remote covers and website icons are downloaded from the addresses returned by the metadata service, or from an image URL you explicitly enter. Those servers receive normal network request information. This is why the plugin declares unrestricted domain access in its manifest.
+## Storage
 
-## Local data
+Up to 20 completed raster previews are cached in memory until the plugin stops. Each card is a single image in Figma; original URL and title are stored in plugin data. Normal Figma storage and synchronization apply. No analytics, passwords, keys, clipboard history, private-account import or local-file read endpoint.
 
-- Manually entered titles and descriptions are not sent to Microlink.
-- Uploaded covers are resized and converted locally, then stored as image fills in the Figma file. They are not uploaded to Microlink.
-- Link metadata is cached in memory for up to 20 URLs while the plugin is open. Closing the plugin clears that cache.
-- Generated cards store their source URL in the Figma document and in plugin data so the link can be reused.
-- Selecting a single URL text layer or an existing Linkmark card may prefill the URL input. It does not trigger a request until you choose **Get preview**.
-
-Linkmark does not use analytics, advertising, browser history, account credentials or authentication cookies. No API keys are bundled in its source.
-
-Using **enter details manually** skips the metadata request. If you also use a local cover upload instead of a remote image, Linkmark makes no preview or image request for that card. Normal Figma document storage and synchronization still apply.
+中文：插件仅在运行期间处理当前页新粘贴的公开 URL，不监听系统剪贴板、不扫描原有文档、不设置开机自启。先用已有本机解析器，失败时可能请求公开预览服务；不读取浏览器登录信息。卡片图片、来源 URL 按正常 Figma 文档机制保存。最多20份会话内存缓存随插件停止清空。

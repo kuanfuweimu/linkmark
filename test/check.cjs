@@ -1,120 +1,61 @@
-const fs = require('node:fs');
-const vm = require('node:vm');
-const assert = require('node:assert/strict');
-const { parseHTML } = require('linkedom');
-const root = require('node:path').resolve(__dirname,'..');
-const code = fs.readFileSync(root+'/code.js','utf8');
-const html = fs.readFileSync(root+'/ui.html','utf8');
-const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
-let count = 0;
-async function test(name, fn) { await fn(); count++; console.log('PASS '+name); }
-function sandbox(options={}) {
-  const nodes=[],messages=[];
-  let serial=0;
-  function node(type) {
-    const n={type,id:String(++serial),children:[],data:{},width:100,height:100,x:0,y:0,removed:false,
-      resize(w,h){assert(w>0 && h>0);this.width=w;this.height=h;},
-      appendChild(child){if(child.parent){child.parent.children=child.parent.children.filter(n=>n!==child);}this.children.push(child);child.parent=this;},
-      setPluginData(k,v){this.data[k]=v;},getPluginData(k){return this.data[k]||'';},setRelaunchData(d){this.relaunch=d;},
-      remove(){this.removed=true;if(this.parent)this.parent.children=this.parent.children.filter(n=>n!==this);}
-    };nodes.push(n);return n;
-  }
-  const page=node('PAGE');page.selection=[];
-  const create=type=>{const n=node(type);page.appendChild(n);return n;};
-  const figma={root:{setRelaunchData(){}},currentPage:page,ui:{postMessage:m=>messages.push(m)},showUI(){},
-    viewport:{center:{x:1000,y:1000},scrollAndZoomIntoView(){}},notify(){},
-    loadFontAsync:async()=>{if(options.fontFail)throw Error('Font unavailable');},listAvailableFontsAsync:async()=>[],
-    createFrame:()=>create('FRAME'),createRectangle:()=>create('RECTANGLE'),createText:()=>create('TEXT'),createNodeFromSvg:()=>create('FRAME'),
-    createImage:()=>({hash:'uploaded-image'}),createImageAsync:async()=>{if(options.imageFail)throw Error('blocked');return {hash:'remote-image'};}
-  };
-  const context=vm.createContext({figma,__html__:html,setTimeout,clearTimeout,Uint8Array});
-  vm.runInContext(code,context);
-  return {figma,page,messages,nodes,context};
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
+const {performance}=require('node:perf_hooks');
+const {createCanvas,loadImage,GlobalFonts}=require('@napi-rs/canvas');
+const root=path.resolve(__dirname,'..');
+const code=fs.readFileSync(root+'/code.js','utf8');
+const html=fs.readFileSync(root+'/ui.html','utf8');
+const script=html.match(/<script>([\s\S]*?)<\/script>/)[1];
+GlobalFonts.loadSystemFonts();
+let count=0;
+async function test(name,fn){await fn();count++;console.log('PASS '+name);}
+function host(){
+ const nodes=[],messages=[],notifications=[],handlers={};let serial=0,images=0;
+ function node(type){const n={type,id:String(++serial),children:[],data:{},x:0,y:0,width:100,height:100,visible:true,locked:false,removed:false,
+  resize(w,h){this.width=w;this.height=h;},appendChild(n){this.children.push(n);n.parent=this;},setPluginData(k,v){this.data[k]=v;},getPluginData(k){return this.data[k]||'';},remove(){this.removed=true;this.parent.children=this.parent.children.filter(n=>n!==this);}};nodes.push(n);return n;}
+ const page=node('PAGE');page.selection=[];page.handlers={};page.on=(t,f)=>page.handlers[t]=f;page.off=t=>delete page.handlers[t];
+ const make=t=>{const n=node(t);page.appendChild(n);return n;};let uiOptions;
+ const figma={command:'',currentPage:page,ui:{postMessage:m=>messages.push(m)},showUI:(h,o)=>uiOptions=o,on:(t,f)=>handlers[t]=f,getNodeByIdAsync:async id=>nodes.find(n=>n.id===id),
+  createRectangle:()=>make('RECTANGLE'),createImage:bytes=>{assert(bytes.length>8);return {hash:'image-'+(++images)};},notify:(text,o)=>notifications.push({text,o}),commitUndo(){}};
+ const context=vm.createContext({figma,__html__:html,setTimeout:(fn,ms)=>{const t=setTimeout(fn,ms);t.unref();return t;},clearTimeout,Uint8Array,console});vm.runInContext(code,context);
+ const run=s=>vm.runInContext(s,context);
+ return {figma,page,nodes,messages,notifications,handlers,run,get uiOptions(){return uiOptions;},make};
 }
-function dom(fetch) {
-  const {window}=parseHTML(html);const sent=[];
-  const parent={postMessage:message=>sent.push(message)};
-  const context=vm.createContext({window,document:window.document,parent,URL,AbortController,fetch,setTimeout,clearTimeout,Image:window.Image,atob,console});
-  // linkedom is a DOM implementation, not a browser and does no rendering or UI automation.
-  window.parent=parent;
-  vm.runInContext(script,context);
-  const run=expr=>vm.runInContext(expr,context);
-  return {window,context,run,sent,$:id=>window.document.getElementById(id)};
+function worker(fetcher){
+ const sent=[],listeners={};
+ const context=vm.createContext({window:{addEventListener:(name,fn)=>listeners[name]=fn},document:{createElement:name=>{assert.equal(name,'canvas');return createCanvas(1,1);}},parent:{postMessage:({pluginMessage:m})=>sent.push(m)},URL,Uint8Array,AbortController,Image:class{},fetch:fetcher,atob,btoa,console,
+  setTimeout:(fn,ms)=>{const t=setTimeout(fn,ms);t.unref();return t;},clearTimeout});
+ vm.runInContext(script,context);
+ context.decode=async blob=>loadImage(Buffer.from(await blob.arrayBuffer()));
+ const run=s=>vm.runInContext(s,context),channel=run('channel');
+ const receive=m=>listeners.message({data:{pluginMessage:{...m,channel}}});receive({type:'init'});
+ return {sent,context,run,receive,channel};
 }
+function link(fetcher){const s=host(),d=worker(fetcher);d.context.parent.postMessage=({pluginMessage:m})=>{d.sent.push(m);s.figma.ui.onmessage(m);};s.figma.ui.postMessage=m=>{s.messages.push(m);d.receive(m);};s.figma.ui.onmessage({type:'ready',channel:d.channel});return {s,d};}
+function pasted(s,url='https://example.com/article',origin='LOCAL'){const n=s.make('TEXT');n.characters=url;n.x=40;n.y=90;s.page.selection=[n];s.page.handlers.nodechange({nodeChanges:[{type:'CREATE',origin,id:n.id,node:n}]});return n;}
+async function settle(d){for(let i=0;i<100;i++){if(!d.run('active')&&!d.run('queue.length'))return;await new Promise(r=>setTimeout(r,10));}throw Error('Queue did not settle');}
+const fixture=createCanvas(640,360);const fc=fixture.getContext('2d');fc.fillStyle='#e6593a';fc.fillRect(0,0,640,360);fc.fillStyle='#fff4db';fc.fillRect(120,80,400,200);const png=fixture.toBuffer('image/png');
+function response(data){return new Response(JSON.stringify(data),{status:200,headers:{'content-type':'application/json'}});}
+function network(calls=[]){return async url=>{calls.push(url);if(url.endsWith('/health'))return response({service:'linkmark'});if(url.includes('/metadata?'))return response({data:{title:'Public project',description:'A description of the project.',image:{url:'https://example.com/cover.png'}}});if(url.includes('/image?'))return new Response(png,{headers:{'content-type':'image/png'}});throw Error('Unexpected network request');};}
 (async()=>{
-  await test('manifest entrypoints and network declaration',()=>{
-    const m=JSON.parse(fs.readFileSync(root+'/manifest.json'));
-    assert.equal(m.editorType[0],'figma');assert.equal(m.documentAccess,'dynamic-page');
-    assert(m.id);assert(m.networkAccess.reasoning);for(const f of [m.main,m.ui])assert(fs.existsSync(root+'/'+f));
-  });
-  await test('all plugin-owned UI copy is English',()=>{
-    assert.equal(/[^\x00-\x7F]/.test('English'),false);
-    for(const content of [code,html,fs.readFileSync(root+'/manifest.json','utf8')])assert.equal(/[\u3400-\u9fff]/.test(content),false);
-    assert(html.includes('lang="en"'));
-  });
-  await test('UI JavaScript parses',()=>new vm.Script(script));
-  await test('editable image card, original links, relaunch and adjacent insertion',async()=>{
-    const s=sandbox();const card={url:'https://example.com/article?x=1',title:'Design article',description:'Summary',showImage:true,imageUrl:'https://example.com/cover.png',logoUrl:'https://example.com/logo.png'};
-    await s.figma.ui.onmessage({type:'insert',card});assert.equal(s.messages.at(-1).type,'inserted');
-    const result=s.page.selection[0];assert.equal(result.width,360);assert.equal(result.layoutMode,'VERTICAL');
-    assert(result.children.some(n=>n.name==='Cover'));
-    const title=s.nodes.find(n=>n.name==='Title');assert.equal(title.hyperlink.value,card.url);assert.equal(title.maxLines,2);
-    const source=s.nodes.find(n=>n.name==='Source link');assert.equal(source.textDecoration,'UNDERLINE');
-    assert.equal(JSON.parse(result.data.linkmark).url,card.url);assert(result.relaunch.open);
-    await s.figma.ui.onmessage({type:'insert',card});assert(s.page.selection[0].x>result.x);
-  });
-  await test('horizontal card puts image on right',async()=>{
-    const s=sandbox();await s.figma.ui.onmessage({type:'insert',card:{url:'https://example.com/',title:'Test',layout:'horizontal',showImage:true,imageBytes:[137,80,78,71]}});
-    const result=s.page.selection[0];assert.equal(result.width,480);assert.equal(result.children.at(-1).name,'Cover');
-  });
-  await test('manual no-image card works without network',async()=>{
-    const s=sandbox({imageFail:true});await s.figma.ui.onmessage({type:'insert',card:{url:'https://example.com',title:'Manual',showImage:false}});
-    assert.equal(s.messages.at(-1).type,'inserted');assert(!s.nodes.find(n=>n.name==='Cover'));
-  });
-  await test('invalid URLs and empty titles never mutate canvas',async()=>{
-    for(const card of [{url:'javascript:alert(1)',title:'Bad'},{url:'https://user:pass@example.com',title:'Bad'},{url:'https://example.com',title:' '}]){
-      const s=sandbox();await s.figma.ui.onmessage({type:'insert',card});assert.equal(s.messages.at(-1).type,'error');assert.equal(s.page.children.length,0);
-    }
-  });
-  await test('cover download failure does not silently insert imageless result',async()=>{
-    const s=sandbox({imageFail:true});await s.figma.ui.onmessage({type:'insert',card:{url:'https://example.com',title:'Test',showImage:true,imageUrl:'https://example.com/a.png'}});
-    assert.equal(s.messages.at(-1).type,'error');assert.equal(s.page.children.length,0);
-  });
-  await test('font failure leaves no partial layers',async()=>{
-    const s=sandbox({fontFail:true});await s.figma.ui.onmessage({type:'insert',card:{url:'https://example.com',title:'Test'}});
-    assert.equal(s.messages.at(-1).type,'error');assert.equal(s.page.children.length,0);
-  });
-  await test('selected URL prefills without automatically sending network requests',async()=>{
-    const s=sandbox();s.page.selection=[{type:'TEXT',characters:'https://example.com',getPluginData:()=>''}];await s.figma.ui.onmessage({type:'ready'});
-    assert.equal(s.messages[0].url,'https://example.com');
-  });
-  await test('UI validates protocols, credentials and internal requests',()=>{
-    const d=dom();assert.equal(d.run("normalizeUrl('example.com')"),'https://example.com/');
-    for(const input of ['javascript:alert(1)','file:///C:/file','https://user:pass@example.com','https://example.com\\@evil.test'])assert.throws(()=>d.run('normalizeUrl('+JSON.stringify(input)+')'));
-    assert.throws(()=>d.run("publicUrl(normalizeUrl('http://127.0.0.1'))"));
-  });
-  await test('metadata is safe text, original URL retained, session cache reused',async()=>{
-    let requests=0;const d=dom(async()=>{requests++;return {ok:true,status:200,json:async()=>({status:'success',data:{title:'<img onerror=alert(1)>',description:'Hello',url:'https://redirect.test/',image:{url:'https://example.com/a.png'}}})};});
-    d.$('url').value='https://example.com';await d.run('fetchPreview()');
-    assert.equal(d.$('card-title').textContent,'<img onerror=alert(1)>');assert.equal(d.$('card-title').children.length,0);
-    assert.equal(d.run('state.url'),'https://example.com/');assert.equal(d.run('state.showImage'),true);
-    await d.run('fetchPreview()');assert.equal(requests,1);
-  });
-  await test('HTTP 429 yields editable fallback and readable error',async()=>{
-    const d=dom(async()=>({ok:false,status:429}));d.$('url').value='https://example.com';await d.run('fetchPreview()');
-    assert.match(d.$('status').textContent,/daily limit/);assert.equal(d.run('state.title'),'example.com');assert.equal(d.run('state.fetching'),false);
-  });
-  await test('late response cannot restore stale card after URL changes',async()=>{
-    let resolve;const d=dom(()=>new Promise(r=>resolve=r));d.$('url').value='https://example.com';const pending=d.run('fetchPreview()');
-    d.$('url').value='https://new.example.com';d.$('url').dispatchEvent(new d.window.Event('input'));
-    resolve({ok:true,status:200,json:async()=>({status:'success',data:{title:'Stale'}})});await pending;
-    assert.equal(d.run('state.url'),'');assert.equal(d.run('state.title'),'');
-  });
-  await test('manual input and insert payload preserve image bytes',()=>{
-    const d=dom();d.$('url').value='https://example.com';d.$('manual').dispatchEvent(new d.window.Event('click',{cancelable:true}));
-    d.run("state.host=true;state.title='Manual';state.imageBytes=[137,80];state.showImage=true;render()");
-    d.$('insert').dispatchEvent(new d.window.Event('click'));assert.equal(d.sent.at(-1).pluginMessage.type,'insert');
-    assert.equal(d.sent.at(-1).pluginMessage.card.title,'Manual');assert.equal(d.sent.at(-1).pluginMessage.card.imageBytes.length,2);
-  });
-  console.log(`${count} checks passed. No browser, screen or Figma runtime was operated.`);
+ await test('manifest has no editor menu and points to valid files',()=>{const m=JSON.parse(fs.readFileSync(root+'/manifest.json','utf8'));assert(!m.menu);assert(!m.relaunchButtons);assert(fs.existsSync(root+'/'+m.main));assert(fs.existsSync(root+'/'+m.ui));});
+ await test('plugin starts with no visible UI and no font or favicon work',()=>{const s=host();assert.equal(s.uiOptions.visible,false);assert(!code.includes('loadFontAsync'));assert(!html.includes('logoUrl'));assert(!/<button|<input|<form/.test(html));});
+ await test('first card is available before any network preview completes',async()=>{const calls=[];const {s,d}=link(async url=>{calls.push(url);if(url.endsWith('/health'))return response({service:'linkmark'});return new Promise(()=>{});});const text=pasted(s);const start=performance.now();await s.run('flush()');assert(text.removed);assert.equal(s.page.selection[0].type,'RECTANGLE');assert.equal(s.page.selection[0].children.length,0);assert.equal(d.sent.filter(m=>m.type==='card').length,1);console.log('  local first-card mock: '+(performance.now()-start).toFixed(1)+' ms');});
+ await test('completed card is the same single node and preserves drag, scale and selection',async()=>{const {s,d}=link(network());const text=pasted(s);await s.run('flush()');const card=s.page.selection[0],id=card.id;card.x=900;card.y=500;card.resize(540,480);const other=s.make('RECTANGLE');s.page.selection=[other];await settle(d);assert.equal(card.id,id);assert.equal(card.x,900);assert.equal(card.y,500);assert.equal(card.width,540);assert.equal(s.page.selection[0],other);assert.equal(card.name,'Card / Public project');assert.equal(card.children.length,0);assert(text.removed);assert.equal(JSON.parse(card.data.linkmark).flattened,true);});
+ await test('repeat URL uses cached raster without another metadata or cover request',async()=>{const calls=[];const {s,d}=link(network(calls));pasted(s);await s.run('flush()');await settle(d);const before=calls.length;pasted(s);await s.run('flush()');await settle(d);assert.equal(calls.length,before);assert.equal(d.sent.filter(m=>m.type==='card').at(-1).final,true);});
+ await test('simultaneous identical links share a metadata and cover request',async()=>{const calls=[];const {s,d}=link(network(calls));pasted(s);await s.run('flush()');pasted(s);await s.run('flush()');await settle(d);assert.equal(calls.filter(u=>u.includes('/metadata?')).length,1);assert.equal(calls.filter(u=>u.includes('/image?')).length,1);assert.equal(s.page.children.filter(n=>n.type==='RECTANGLE').length,2);});
+ await test('independent links run in parallel with a bound of three',async()=>{let concurrent=0,max=0;const d=worker(async url=>{if(url.endsWith('/health'))return response({service:'linkmark'});concurrent++;max=Math.max(max,concurrent);await new Promise(r=>setTimeout(r,30));concurrent--;return response({data:{title:'Parallel'}});});for(let i=0;i<6;i++)d.receive({type:'render',sourceId:String(i),url:'https://example.com/'+i});await settle(d);assert.equal(max,3);assert.equal(d.sent.filter(m=>m.type==='card'&&m.final).length,6);});
+ await test('original text edited before the initial bitmap is not replaced',async()=>{const s=host();await s.figma.ui.onmessage({type:'ready',channel:'a'});const t=pasted(s);await s.run('flush()');t.characters='Keep this';await s.figma.ui.onmessage({type:'card',channel:'a',sourceId:t.id,bytes:new Uint8Array(20),final:false});assert(!t.removed);assert.equal(s.page.children.length,1);});
+ await test('deleted pending card is never resurrected',async()=>{const {s,d}=link(network());pasted(s);await s.run('flush()');s.page.selection[0].remove();await settle(d);assert.equal(s.page.children.length,0);});
+ await test('user-replaced image fill is not overwritten by late preview',async()=>{const {s,d}=link(network());pasted(s);await s.run('flush()');const card=s.page.selection[0];card.fills=[{type:'IMAGE',imageHash:'user-image'}];await settle(d);assert.equal(card.fills[0].imageHash,'user-image');});
+ await test('undo-restored URL is not automatically converted again',async()=>{const {s,d}=link(network());const t=pasted(s);await s.run('flush()');await settle(d);s.page.selection[0].remove();t.removed=false;s.page.appendChild(t);s.page.selection=[t];s.page.handlers.nodechange({nodeChanges:[{type:'CREATE',origin:'LOCAL',id:t.id,node:t}]});await s.run('flush()');assert(!t.removed);});
+ await test('page change does not apply late image work to another page',async()=>{const {s,d}=link(network());pasted(s);await s.run('flush()');const card=s.page.selection[0],hash=card.fills[0].imageHash;s.figma.currentPage={selection:[]};await settle(d);assert.equal(card.fills[0].imageHash,hash);});
+ await test('existing edits, remote creations and nested text are ignored',async()=>{const s=host();await s.figma.ui.onmessage({type:'ready',channel:'a'});const t=pasted(s,undefined,'REMOTE');await s.run('flush()');assert(!t.removed);s.page.handlers.nodechange({nodeChanges:[{type:'PROPERTY_CHANGE',origin:'LOCAL',id:t.id,node:t}]});await s.run('flush()');const nested=pasted(s);nested.parent=s.make('FRAME');await s.run('flush()');assert.equal(s.messages.filter(m=>m.type==='render').length,0);});
+ await test('early paste before handshake waits and then processes',async()=>{const s=host(),t=pasted(s);await s.run('flush()');assert.equal(s.messages.length,0);await s.figma.ui.onmessage({type:'ready',channel:'a'});assert.equal(s.messages.at(-1).sourceId,t.id);});
+ await test('private URLs and credentials do not reach preview services',async()=>{const calls=[];const d=worker(network(calls));for(const url of ['http://127.0.0.1/a','https://u:p@example.com','https://box.local/a','http://localhost./a','file:///tmp/a','http://example.com:1234'])d.receive({type:'render',sourceId:url,url});await settle(d);assert(calls.every(u=>u.endsWith('/health')));assert.equal(d.sent.filter(m=>m.type==='card').length,0);});
+ await test('metadata failure keeps a movable fallback and allows a later retry',async()=>{const calls=[];const {s,d}=link(async url=>{calls.push(url);if(url.endsWith('/health'))return response({service:'linkmark'});throw Error('Unavailable');});pasted(s);await s.run('flush()');await settle(d);assert.equal(s.page.selection[0].type,'RECTANGLE');assert.equal(d.run('cache.size'),0);assert(s.notifications.some(n=>/unavailable/.test(n.text)));});
+ await test('denied metadata is rejected instead of becoming the card title',()=>{const d=worker(network());assert.throws(()=>d.run("validate({title:'Access denied'})"));});
+ await test('wrong-channel replies and duplicate final packets do not mutate cards',async()=>{const {s,d}=link(network());pasted(s);await s.run('flush()');await settle(d);const card=s.page.selection[0],hash=card.fills[0].imageHash,packet=d.sent.filter(m=>m.type==='card').at(-1);await s.figma.ui.onmessage({...packet,channel:'wrong'});await s.figma.ui.onmessage(packet);assert.equal(card.fills[0].imageHash,hash);});
+ await test('real canvas renderer produces a decodable 2x raster with Chinese and long titles',async()=>{const d=worker(network());const bytes=d.run("raster('https://example.com/project',{title:'展览设计与材料结构 — A long project title that wraps naturally',description:'图像与文字合成单个卡片对象，可直接整张拖动。'},null)");const image=await loadImage(Buffer.from(bytes));assert.equal(image.width,720);assert.equal(image.height,640);assert(bytes.length<6*1024*1024);});
+ if(process.env.LINKCARD_LIVE==='1')await test('live helper metadata and cover raster benchmark',async()=>{const calls=[];const d=worker(async(u,o)=>{calls.push(u.split('?')[0]);return fetch(u,o);});const url='https://www.behance.net/gallery/257926345/Imagination-Day-12';const start=performance.now();const result=await d.run(`build(${JSON.stringify(url)})`);const cold=performance.now()-start;const t=performance.now();await d.run(`build(${JSON.stringify(url)})`);const warm=performance.now()-t;assert(!result.incomplete);const image=await loadImage(Buffer.from(result.bytes));assert.equal(image.width,720);fs.mkdirSync(process.env.LINKCARD_OUTPUT,{recursive:true});fs.writeFileSync(path.join(process.env.LINKCARD_OUTPUT,'Linkcard-preview.jpg'),Buffer.from(result.bytes));const report={cold_ms:Math.round(cold),cached_ms:Number(warm.toFixed(2)),image_bytes:result.bytes.length,requests:calls,figma_runtime:'not tested',renderer:'native Canvas2D, not Chromium'};fs.writeFileSync(path.join(process.env.LINKCARD_OUTPUT,'Linkcard-checks.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));});
+ console.log(count+' checks passed. No screen or browser automation.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

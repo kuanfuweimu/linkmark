@@ -56,7 +56,7 @@ async function updateTitle(record) {
       record.label = label;
       label.fontName = titleFont;
       label.fills = [{ type: 'SOLID', color: { r: 0.16, g: 0.16, b: 0.16 } }];
-      label.textAutoResize = 'TRUNCATE';
+      label.textAutoResize = 'NONE';
       label.textTruncation = 'ENDING';
       label.maxLines = 2;
       label.locked = true;
@@ -284,7 +284,14 @@ figma.ui.onmessage = async message => {
     try { applyCard(message); }
     catch (error) { figma.notify(error.message || 'Could not create card.', { error: true }); }
   }
-  if (message.type === 'notice') figma.notify(String(message.text || '').slice(0, 220), { timeout: 4000, error: message.error === true });
+  if (message.type === 'rejected') {
+    // 原文本保留，不再误报 worker 无响应。Keep the source text; no false timeout.
+    clearTimeout(initialReplies.get(message.sourceId));
+    initialReplies.delete(message.sourceId);
+    sources.delete(message.sourceId);
+    figma.notify(String(message.text || 'Link was not accepted.').slice(0, 220), { error: true, timeout: 5000 });
+  }
+  if (message.type === 'notice')figma.notify(String(message.text || '').slice(0, 220), { timeout: 4000, error: message.error === true });
 };
 // Hidden iframe performs metadata, image decoding and rasterization. No editor UI.
 function checkStartup() {

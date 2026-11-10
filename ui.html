@@ -135,8 +135,9 @@ function drain(){
 function handleTask(message){
   if(seen.has(message.sourceId))return;
   let url;
-  try{url=publicUrl(message.url);}catch(error){post({type:'notice',text:error.message,error:true});return;}
-  if(queue.length+active>=20){post({type:'notice',text:'Please paste up to 20 links at a time.',error:true});return;}
+  // Reply with the sourceId so the host clears its pending state and reply timer.
+  try{url=publicUrl(message.url);}catch(error){post({type:'rejected',sourceId:message.sourceId,text:error.message});return;}
+  if(queue.length+active>=20){post({type:'rejected',sourceId:message.sourceId,text:'Please paste up to 20 links at a time.'});return;}
   seen.add(message.sourceId);if(seen.size>200)seen.delete(seen.values().next().value);
   if(cache.has(url)){post({type:'card',sourceId:message.sourceId,...cache.get(url),final:true});return;}
   try{
